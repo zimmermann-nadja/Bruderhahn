@@ -3,9 +3,9 @@
 # Distribution ####
 
 ## data structure ####
-#"C:/Users/nz24r283/OneDrive/ETH/Masterarbeit_Bruderhahn/Auswertung/Bruderhahn-/Distribution_R.xlsx"
+
 library(readxl)
-Distribution <- read_excel("C:/Users/nadja/OneDrive/ETH/Masterarbeit_Bruderhahn/Auswertung/Bruderhahn-/Distribution_R.xlsx")
+Distribution <- read_excel("C:/Users/nz24r283/OneDrive/ETH/Masterarbeit_Bruderhahn/Auswertung/Bruderhahn-/Distribution_R.xlsx")
 
 #Pen und Treatments als Faktor setzen, weil wir brauchen Pen als random term 
 str(Distribution)
@@ -168,7 +168,7 @@ ggplot(stacked.df, aes(fill=Position, y=count, x=timepoint)) +
 #Stacked nach timepoint und treatment
 ggplot(stacked.df, aes(fill=Position, y=count, x=timepoint)) +
   geom_bar(position="fill", stat="identity")+
-#  facet_grid(~treat)+
+  #  facet_grid(~treat)+
   facet_wrap(~treat+woa)
 
 
@@ -204,11 +204,11 @@ topP <- glmer(`top perch` ~ treat + woa + timepoint +
                 (1|pen), family=poisson, data = less_woa)
 
 topP1 <- glmer(`top perch` ~ treat + woa + timepoint + 
-                treat:woa +
-                treat:timepoint +
-                woa:timepoint + 
-                #treat:woa:timepoint+              
-                (1|pen), family=poisson, data = less_woa)
+                 treat:woa +
+                 treat:timepoint +
+                 woa:timepoint + 
+                 #treat:woa:timepoint+              
+                 (1|pen), family=poisson, data = less_woa)
 #Likelyhood_ration Test, um zu schauen, ob ^2 und ^3 gleich sind. ^2 ist zu bevorzugen. Wenn  nicht signifikant, kann man ^2 nehmen
 anova(topP,topP1)
 
@@ -219,31 +219,31 @@ check_overdispersion(topP)
 
 
 topP1.wtp <- glmer(`top perch` ~ treat + woa + timepoint + 
-                 treat:woa +
-                 treat:timepoint +
-                 #woa:timepoint + 
-                 #treat:woa:timepoint+              
-                 (1|pen), family=poisson, data = less_woa)
+                     treat:woa +
+                     treat:timepoint +
+                     #woa:timepoint + 
+                     #treat:woa:timepoint+              
+                     (1|pen), family=poisson, data = less_woa)
 
 anova(topP1,topP1.wtp)
 #Hier ist es signifikant, deshalb darf ich nicht eine Stufe weiter (das wäre linear)
 
 topP1.trttp <- glmer(`top perch` ~ treat + woa + timepoint + 
-                     treat:woa +
-                     #treat:timepoint +
-                     woa:timepoint + 
-                     #treat:woa:timepoint+              
-                     (1|pen), family=poisson, data = less_woa)
+                       treat:woa +
+                       #treat:timepoint +
+                       woa:timepoint + 
+                       #treat:woa:timepoint+              
+                       (1|pen), family=poisson, data = less_woa)
 
 anova(topP1,topP1.trttp)
 #HIer ist es nicht signifikant 
 
 topP1.trtwoa <- glmer(`top perch` ~ treat + woa + timepoint + 
-                       #treat:woa +
-                       treat:timepoint +
-                       woa:timepoint + 
-                       #treat:woa:timepoint+              
-                       (1|pen), family=poisson, data = less_woa)
+                        #treat:woa +
+                        treat:timepoint +
+                        woa:timepoint + 
+                        #treat:woa:timepoint+              
+                        (1|pen), family=poisson, data = less_woa)
 
 anova(topP1,topP1.trtwoa)
 
@@ -398,7 +398,7 @@ feed_tot$feed <- as.numeric(feed_tot$feed)
 ggplot(feed_tot, aes(treat,feed,)) +
   geom_boxplot(aes(color = treat), outlier.shape = 16, outlier.size = 1.5, alpha = 0.5) +
   facet_grid(~woa) +
-   scale_fill_brewer(palette = "Set1") +
+  scale_fill_brewer(palette = "Set1") +
   scale_color_brewer(palette = "Set1") + 
   theme_minimal() +
   labs(
@@ -438,7 +438,7 @@ boxplot (split (resid (model_Futter), feed_tot [, 'pen'])) # für jede erklären
 # therefore double check with following: Globalen p-Wert berechnen
 
 #lmer:
-  
+
 modell.null.lmer <- lmer(feed ~ 1 + (1 | pen),feed_tot)
 anova (model_Futter, modell.null.lmer)
 
@@ -451,23 +451,23 @@ summary (modell.null.p)
 
 anova (model_Futter, type= 'marginal')
 #für jeden Haupteffekt und jede Interaktion (je einmal weglassen): (habe ich noch nicht gemacht: xxx jeweils durch die weggelassene Variable ersetzen)
-  modell.XXX.lmer <- lmer (feed ~ treat + # einmal weglassen: Haupteffekt VarA1
-                               
-                               woa + # einmal weglassen: Haupteffekt VarB1
-                               
-                               I(woa^2) + # einmal weglassen: Haupteffekt VarC1
-                               
-                               treat:woa + # einmal weglassen: 1. Zweifachinteraktion
-                               
-                               treat:I(woa^2) + # einmal weglassen: 2. Zweifachinteraktion
-                               
-                               treat:I(woa^2) + # einmal weglassen: 3. Zweifachinteraktion
-                               
-                               treat:woa:I(woa^2) + # einmal weglassen: Dreifachinteraktion
-                               
-                               (1 | pen),
-                             
-                             feed_tot, REML= FALSE)
+modell.XXX.lmer <- lmer (feed ~ treat + # einmal weglassen: Haupteffekt VarA1
+                           
+                           woa + # einmal weglassen: Haupteffekt VarB1
+                           
+                           I(woa^2) + # einmal weglassen: Haupteffekt VarC1
+                           
+                           treat:woa + # einmal weglassen: 1. Zweifachinteraktion
+                           
+                           treat:I(woa^2) + # einmal weglassen: 2. Zweifachinteraktion
+                           
+                           treat:I(woa^2) + # einmal weglassen: 3. Zweifachinteraktion
+                           
+                           treat:woa:I(woa^2) + # einmal weglassen: Dreifachinteraktion
+                           
+                           (1 | pen),
+                         
+                         feed_tot, REML= FALSE)
 
 modell.XXX.p <- PBmodcomp (model_Futter, modell.XXX.blmer)
 summary (modell.XXX.p)
@@ -478,8 +478,8 @@ summary (modell.XXX.p)
 #ACHTUNG hier zuerst lmerTest deinstallieren (oder einfach R neustarten, contrast funktioniert nicht mit lmerTest)
 library (contrast)
 modell.pred <- contrast (model_Futter, list (treat= levels (feed_tot [, 'treat']),
-                                           
-                                           woa= levels (feed_tot [, 'woa'])))
+                                             
+                                             woa= levels (feed_tot [, 'woa'])))
 
 modell.pred [['Contrast']]
 modell.pred [['Lower']]
