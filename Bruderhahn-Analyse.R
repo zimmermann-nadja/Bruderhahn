@@ -1,12 +1,16 @@
 # Bruderhahn #
 
 # Distribution ####
-setwd("C:/Users/nz24r283/OneDrive/ETH/Masterarbeit_Bruderhahn/Auswertung/Bruderhahn-")
-getwd()
+#setwd("C:/Users/nz24r283/OneDrive/ETH/Masterarbeit_Bruderhahn/Auswertung/Bruderhahn-")
+#getwd()
 ## data structure ####
 #"C:/Users/nz24r283/OneDrive/ETH/Masterarbeit_Bruderhahn/Auswertung/Bruderhahn-/Distribution_R.xlsx"
 library(readxl)
-Distribution <- read_excel("C:/Users/nadja/OneDrive/ETH/Masterarbeit_Bruderhahn/Auswertung/Bruderhahn-/Distribution_R.xlsx")
+library(dplyr)
+library(tidyr)
+
+#Distribution <- read_excel("C:/Users/nadja/OneDrive/ETH/Masterarbeit_Bruderhahn/Auswertung/Bruderhahn-/Distribution_R.xlsx")
+Distribution <- read_excel("C:/Users/nz24r283/OneDrive/ETH/Masterarbeit_Bruderhahn/Auswertung/Bruderhahn-/Distribution_R.xlsx")
 
 #Pen und Treatments als Faktor setzen, weil wir brauchen Pen als random term 
 str(Distribution)
@@ -16,7 +20,7 @@ Distribution$timepoint <- as.factor(Distribution$timepoint)
 str(Distribution)
 summary(Distribution)
 summary(Distribution$pen)
-
+View(Distribution)
 
 ## Kor zw Variablen ####
 #Wenn ich zu viele Korrelierende Variablen habe, ist das nicht gut für das Modell, dann müsste ich mit Multitesting korrigieren 
@@ -47,19 +51,26 @@ pairs(Distribution[,c(-1,-2,-3,-4,-5,-6,-14)], lower.panel=panel.smooth, upper.p
 
 # Korrelation von bestimmten Variablen bestimmen
 # Perform multiple linear regression
-regression_model <- lm('top perch' ~ 'middle perch', data = less_woa)
+less_timepoints <- Distribution  %>% filter((timepoint %in% c("1","13"))) #idealerweise mit 7, wenn mehr Daten (jetzt kann er nicht schätzen)
+less_woa <- less_timepoints  %>% filter((woa %in% c("5", "7","9","11","13"))) # woa 1 und 3 nicht drin, weil keine Sitzstangennutzung
+regression_model <- lm(topP ~ midP, data = less_woa)
 # View the summary of the regression results
 summary(regression_model)
+
+cor_perches <- Distribution  %>% filter((woa %in% c("5", "7","9","11","13"))) # woa 1 und 3 nicht drin, weil keine Sitzstangennutzung
+regression_model_cor_perches<- lm(topP ~ midP, data = cor_perches)
+# View the summary of the regression results
+summary(regression_model_cor_perches)
 
 ## Visualisierung ####
 ### Positon ####
 #jitter -> bricht Punkte auf, die dieselben sind 
 library(ggplot2)
 #Anzahl Tiere in der Einstreu pro woa 
-ggplot(Distribution, aes(timepoint, `litter incl. lowest ramp`,colour = treat)) +
+ggplot(Distribution, aes(timepoint, `litter`,colour = treat)) +
   geom_point() +   geom_jitter()
 
-ggplot(Distribution, aes(x = timepoint, y = `litter incl. lowest ramp`, fill = treat)) +
+ggplot(Distribution, aes(x = timepoint, y = `litter`, fill = treat)) +
   geom_boxplot(aes(color = treat), outlier.shape = 16, outlier.size = 1.5, alpha = 0.5) + 
   facet_grid(~woa) + 
   scale_fill_brewer(palette = "Set1") + 
@@ -75,17 +86,17 @@ ggplot(Distribution, aes(x = timepoint, y = `litter incl. lowest ramp`, fill = t
   theme(plot.title = element_text(hjust = 0.5))
 
 #Anzahl Tiere auf der ersten Etage pro woa 
-ggplot(Distribution, aes(timepoint, `first floor incl. middle ramp`,colour = treat)) +
+ggplot(Distribution, aes(timepoint, `first_floor`,colour = treat)) +
   geom_point() +   geom_jitter()
 
-ggplot(Distribution, aes(x = timepoint, y = `first floor incl. middle ramp`, fill = treat)) +
+ggplot(Distribution, aes(x = timepoint, y = `first_floor`, fill = treat)) +
   geom_boxplot(aes(color = treat), outlier.shape = 16, outlier.size = 1.5, alpha = 0.5) + 
   facet_grid(~woa) + 
   scale_fill_brewer(palette = "Set1") + 
   scale_color_brewer(palette = "Set1") + 
   theme_minimal() +
   labs(
-    title = "Number of animals in first floor incl. middle ramp",
+    title = "Number of animals in first_floor",
     x = "Zeitpunkt",
     y = "Verteilung",
     fill = "Verfahren",
@@ -95,10 +106,10 @@ ggplot(Distribution, aes(x = timepoint, y = `first floor incl. middle ramp`, fil
 
 
 #Anzahl Tiere auf der zweiten Etage pro woa 
-ggplot(Distribution, aes(timepoint, `second floor incl. top ramp`,colour = treat)) +
+ggplot(Distribution, aes(timepoint, `second_floor`,colour = treat)) +
   geom_point() +   geom_jitter()
 
-ggplot(Distribution, aes(x = timepoint, y = `second floor incl. top ramp`, fill = treat)) +
+ggplot(Distribution, aes(x = timepoint, y = `second_floor`, fill = treat)) +
   geom_boxplot(aes(color = treat), outlier.shape = 16, outlier.size = 1.5, alpha = 0.5) + 
   facet_grid(~woa) + 
   scale_fill_brewer(palette = "Set1") + 
@@ -115,7 +126,7 @@ ggplot(Distribution, aes(x = timepoint, y = `second floor incl. top ramp`, fill 
 
 #Anzahl Tiere auf der mittleren Sitzstange pro woa 
 Distribution %>% filter(!(timepoint %in% c("2", "6", "11", "12")))
-ggplot(Distribution %>% filter(!(timepoint %in% c("1", "3"))), aes(timepoint, `middle perch`,fill = treat)) +
+ggplot(Distribution %>% filter(!(timepoint %in% c("1", "3"))), aes(timepoint, `midP`,fill = treat)) +
   geom_boxplot(aes(color = treat), outlier.shape = 16, outlier.size = 1.5, alpha = 0.5) +
   facet_grid(~woa)+
   scale_fill_brewer(palette = "Set1") + 
@@ -131,7 +142,7 @@ ggplot(Distribution %>% filter(!(timepoint %in% c("1", "3"))), aes(timepoint, `m
   theme(plot.title = element_text(hjust = 0.5))
 
 #Anzahl Tiere auf der obersten Sitzstange pro woa 
-ggplot(Distribution  %>% filter((timepoint %in% c("1", "13"))), aes(timepoint, `top perch`,fill = treat)) +
+ggplot(Distribution  %>% filter((timepoint %in% c("1", "13"))), aes(timepoint, `topP`,fill = treat)) +
   geom_boxplot(aes(color = treat), outlier.shape = 16, outlier.size = 1.5, alpha = 0.5) +
   facet_grid(~woa)+
   scale_fill_brewer(palette = "Set1") + 
@@ -209,18 +220,18 @@ Distribution$woa <- as.factor(Distribution$woa)
 Distribution$timepoint <- factor(Distribution$timepoint, ordered=T)
 
 less_timepoints <- Distribution  %>% filter((timepoint %in% c("1","13"))) #idealerweise mit 7, wenn mehr Daten (jetzt kann er nicht schätzen)
-less_woa <- less_timepoints  %>% filter((woa %in% c("5", "7"))) # woa 1 und 3 nicht drin, weil keine Sitzstangennutzung
+less_woa <- less_timepoints  %>% filter((woa %in% c("5", "7","9","11","13"))) # woa 1 und 3 nicht drin, weil keine Sitzstangennutzung
 str(less_timepoints)
-topP <- glmer(`top perch` ~ (treat + woa + timepoint)^3 + (1|pen), family=poisson, data = less_woa)
+topP <- glmer(`topP` ~ (treat + woa + timepoint)^3 + (1|pen), family=poisson, data = less_woa)
 
-topP <- glmer(`top perch` ~ treat + woa + timepoint + 
+topP <- glmer(`topP` ~ treat + woa + timepoint + 
                 treat:woa +
                 treat:timepoint +
                 woa:timepoint + 
                 treat:woa:timepoint+              
                 (1|pen), family=poisson, data = less_woa)
 
-topP1 <- glmer(`top perch` ~ treat + woa + timepoint + 
+topP1 <- glmer(`topP` ~ treat + woa + timepoint + 
                 treat:woa +
                 treat:timepoint +
                 woa:timepoint + 
@@ -235,7 +246,7 @@ check_overdispersion(topP)
 
 
 
-topP1.wtp <- glmer(`top perch` ~ treat + woa + timepoint + 
+topP1.wtp <- glmer(`topP` ~ treat + woa + timepoint + 
                  treat:woa +
                  treat:timepoint +
                  #woa:timepoint + 
@@ -245,7 +256,7 @@ topP1.wtp <- glmer(`top perch` ~ treat + woa + timepoint +
 anova(topP1,topP1.wtp)
 #Hier ist es signifikant, deshalb darf ich nicht eine Stufe weiter (das wäre linear)
 
-topP1.trttp <- glmer(`top perch` ~ treat + woa + timepoint + 
+topP1.trttp <- glmer(`topP` ~ treat + woa + timepoint + 
                      treat:woa +
                      #treat:timepoint +
                      woa:timepoint + 
@@ -255,7 +266,7 @@ topP1.trttp <- glmer(`top perch` ~ treat + woa + timepoint +
 anova(topP1,topP1.trttp)
 #HIer ist es nicht signifikant 
 
-topP1.trtwoa <- glmer(`top perch` ~ treat + woa + timepoint + 
+topP1.trtwoa <- glmer(`topP` ~ treat + woa + timepoint + 
                        #treat:woa +
                        treat:timepoint +
                        woa:timepoint + 
@@ -271,7 +282,7 @@ emm1
 emm1$contrasts
 
 #Anzahl Tiere auf der obersten Sitzstange pro woa 
-ggplot(Distribution  %>% filter((timepoint %in% c("1", "13"))), aes(timepoint, `top perch`)) +
+ggplot(Distribution  %>% filter((timepoint %in% c("1", "13"))), aes(timepoint, `topP`)) +
   geom_boxplot(aes(), outlier.shape = 16, outlier.size = 1.5, alpha = 0.5) +
   facet_grid(~woa)+
   scale_fill_brewer(palette = "Set1") + 
@@ -315,20 +326,20 @@ summary(access$pen)
 
 #jitter -> bricht Punkte auf, die dieselben sind 
 library(ggplot2)
-ggplot(access, aes(time, `1 to 2 floor ramp`,colour = treat)) +
+ggplot(access, aes(time, `2_floor_to_mP_ramp`,colour = treat)) +
   geom_point() +   geom_jitter()
 
-ggplot(access, aes(time,`1 to 2 floor ramp`, fill = treat)) +
+ggplot(access, aes(time,`2_floor_to_mP_ramp`, fill = treat)) +
   geom_boxplot(aes(color = treat), outlier.shape = 16, outlier.size = 1.5, alpha = 0.5) +
   facet_grid(~woa) +
   scale_fill_brewer(palette = "Set1") +
   scale_color_brewer(palette = "Set1") + 
   theme_minimal() +
   scale_x_discrete(
-    limits = c("dust", "mid", "dawn") # Hier die gewünschte Reihenfolge festlegen
+    limits = c("dusk", "mid", "dawn") # Hier die gewünschte Reihenfolge festlegen
   ) +
   labs(
-    title = "1 to 2 floor via ramp",
+    title = " 2_floor_to_mP_ramp",
     y = "number of animals",
     fill = "treatment",
     color = "treatment"
@@ -358,7 +369,7 @@ ggplot(access, aes(time,`falling`, fill = treat)) +
   theme(plot.title = element_text(hjust = 0.5),axis.title.x = element_blank())
 
 #Übersicht tried and failed 
-ggplot(access, aes(time,`tried and failed`, fill = treat)) +
+ggplot(access, aes(time,`tried_and_failed`, fill = treat)) +
   geom_boxplot(aes(color = treat), outlier.shape = 16, outlier.size = 1.5, alpha = 0.5) +
   facet_grid(~woa) +
   scale_fill_brewer(palette = "Set1") +
