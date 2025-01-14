@@ -1,5 +1,5 @@
 # Bruderhahn #
-#Pfad von G nehmen, damit Yamenah das auch einlesen kann!-> aber dann kann ich nicht mehr von zuhause aus arbeiten
+
 # Distribution ####
 
 ## data structure ####
@@ -190,7 +190,7 @@ stacked_sub.df <- stacked.df %>%
 ggplot(stacked_sub.df, aes(fill = Position, y = count, x = treat)) +
   geom_bar(position = "fill", stat = "identity") +
   facet_grid(~woa)+
-  ggtitle("Distribution of birds per treatment and woa")+
+  ggtitle("Distribution of birds during light phase per treatment and woa")+
   labs(
   title = "Distribution of birds per treatment and woa",  # Diagrammtitel
   x = "treatment",
@@ -420,7 +420,7 @@ ggplot(feed_tot, aes(treat,feed,)) +
   scale_color_brewer(palette = "Set1") + 
   theme_minimal() +
   labs(
-    title = "feed use per animal",
+    title = "feed use per pen of 20 animals",
     y = "feed use [kg]",
     fill = "treatment",
     color = "treatment"
@@ -505,4 +505,54 @@ modell.pred [['Upper']]
 
 # diese Schätzungen werden dann im Plot eingezeichnet...zeige ich dir noch oder ergänze ich dir noch, einfach dieses Skript ins github pushen 
 
+##Statistik ####
+library(lme4)
+library(lmerTest)
+#PEn scheint kein relevanter Faktor gewesen zu sein 
+model_Futter <- lmer(feed^2~(treat+woa+I(woa^2))^2 + (1|pen), data =feed_tot) # 3fach Interaktion ()^3 nicht sign. kann ersetzt werden durch ^2 because variance explained by pen = 0 ==> removal of random term:
+model_Futter.1 <- lm(feed~(treat+woa+I(woa^2))^2, data =feed_tot)
+anova(model_Futter, model_Futter.1) # yes, we can remove pen: does not explain anything 
+summary(model_Futter)
+summary(model_Futter.1) # in both cases estimates are very similar: e.g. compare intercept estimates...
+plot(feed_tot$pen, feed_tot$feed) # varianz durch pen sehr klein, fast 0
+
+model_Futter <- lm(feed^2~(treat+woa+ I(woa^2))^3 , data =feed_tot)
+
+summary(model_Futter)
 #Health ####-------------------------------------------------------------------------------------------------------------------------------------
+##Gewicht #### 
+#Visualisiserung
+library(readxl)
+library(ggplot2)
+library(tidyr)
+
+#weight <- read_excel("C:/Users/nz24r283/OneDrive/ETH/Masterarbeit_Bruderhahn/Auswertung/Bruderhahn-/Gewicht_R.xlsx")
+weight_all <- read_excel("C:/Users/nadja/OneDrive/ETH/Masterarbeit_Bruderhahn/Auswertung/Bruderhahn-/Gewicht_R.xlsx")
+
+weight <- weight_all[,c(-1)]
+names(weight)
+table(weight)
+
+str()
+summary(weight)
+View(weight)
+str(weight)
+weight$woa <- as.integer(weight$woa) #weil ein quadratischer Term und diese dann kein Faktor sein kann
+weight$pen <- as.factor(weight$pen)
+weight$treat <- as.factor(weight$treat)
+weight$weight <- as.numeric(weight$weight)
+
+ggplot(weight, aes(treat,weight,)) +
+  geom_boxplot(aes(color = treat), outlier.shape = 16, outlier.size = 1.5, alpha = 0.5) +
+  facet_grid(~woa) +
+  scale_fill_brewer(palette = "Set1") +
+  scale_color_brewer(palette = "Set1") + 
+  theme_minimal() +
+  labs(
+    title = "weight of birds",
+    y = "weight [g]",
+    fill = "treatment",
+    color = "treatment"
+  ) +
+  theme(plot.title = element_text(hjust = 0.5),axis.title.x = element_blank())
+
