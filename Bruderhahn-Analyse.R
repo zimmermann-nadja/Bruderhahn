@@ -8,9 +8,10 @@
 library(readxl)
 library(dplyr)
 library(tidyr)
+library(ggplot2)
 
-#Distribution <- read_excel("C:/Users/nadja/OneDrive/ETH/Masterarbeit_Bruderhahn/Auswertung/Bruderhahn-/Distribution_R.xlsx")
-Distribution <- read_excel("C:/Users/nz24r283/OneDrive/ETH/Masterarbeit_Bruderhahn/Auswertung/Bruderhahn-/Distribution_R.xlsx")
+Distribution <- read_excel("C:/Users/nadja/OneDrive/ETH/Masterarbeit_Bruderhahn/Auswertung/Bruderhahn-/Distribution_R.xlsx")
+#Distribution <- read_excel("C:/Users/nz24r283/OneDrive/ETH/Masterarbeit_Bruderhahn/Auswertung/Bruderhahn-/Distribution_R.xlsx")
 
 #Pen und Treatments als Faktor setzen, weil wir brauchen Pen als random term 
 str(Distribution)
@@ -53,15 +54,44 @@ pairs(Distribution[,c(-1,-2,-3,-4,-5,-6,-14)], lower.panel=panel.smooth, upper.p
 # Perform multiple linear regression
 less_timepoints <- Distribution  %>% filter((timepoint %in% c("1","13"))) #idealerweise mit 7, wenn mehr Daten (jetzt kann er nicht schätzen)
 less_woa <- less_timepoints  %>% filter((woa %in% c("5", "7","9","11","13"))) # woa 1 und 3 nicht drin, weil keine Sitzstangennutzung
-regression_model <- lm(topP ~ midP, data = less_woa)
+regression_model_less_woa <- cor.test(less_woa$topP, less_woa$midP, m='p')
+summary(regression_model_less_woa)
+less_woa$topP <-as.numeric(less_woa$topP)
+less_woa$midP <-as.numeric(less_woa$midP)
+
+less_woa$topP <-as.integer(less_woa$topP)
+less_woa$midP <-as.integer(less_woa$midP)
+cor.test(less_woa$topP, less_woa$midP, m='kendall')
+
+regression_model <- lm(topP ~ midP+treat, data = less_woa)
+
+
+
 # View the summary of the regression results
 summary(regression_model)
 
 cor_perches <- Distribution  %>% filter((woa %in% c("5", "7","9","11","13"))) # woa 1 und 3 nicht drin, weil keine Sitzstangennutzung
-regression_model_cor_perches<- lm(topP ~ midP, data = cor_perches)
+#regression_model_cor_perches<- glm(topP ~ midP+treat, family="poisson",data = cor_perches)
 # View the summary of the regression results
+#Wir nehmen den, weil unsere Daten nicht numerisch sind, sondern integer, m=s, m = kendall -> Werte werden nach Grösse sortiert (von 0 bis 20) und gibt diesen einen Rang, DAtenpunkte mit dem selben Rang werden Bindungen genannt, Kendall genommen um die Bindungen zu berücksichtigen
+#tie corrected rank-based statistic -> kendall-tau Methode
+cor.test(cor_perches$topP, cor_perches$midP, m='s')
 summary(regression_model_cor_perches)
+#>0.45 ist starke korrelation, ich habe 0.7
+plot(cor_perches$midP, cor_perches$topP)
+str(cor_perches)
 
+ggplot(less_woa, aes(x=midP, y=topP)) +
+  
+  geom_point()+
+  
+  geom_smooth(method=loess, color="black")+
+  
+  # labs(title="Correlation between Diagnostic testscore and Percentage",
+  
+  # x= "Total testscore", y = "Percentage" )+
+  
+  theme(plot.title = element_text(size=15, face="bold", hjust = 0.5))
 ## Visualisierung ####
 ### Positon ####
 #jitter -> bricht Punkte auf, die dieselben sind 
@@ -126,7 +156,7 @@ ggplot(Distribution, aes(x = timepoint, y = `second_floor`, fill = treat)) +
 
 #Anzahl Tiere auf der mittleren Sitzstange pro woa 
 Distribution %>% filter(!(timepoint %in% c("2", "6", "11", "12")))
-ggplot(Distribution %>% filter(!(timepoint %in% c("1", "3"))), aes(timepoint, `midP`,fill = treat)) +
+ggplot(Distribution %>% filter((timepoint %in% c("1", "13"))), aes(timepoint, `midP`,fill = treat)) +
   geom_boxplot(aes(color = treat), outlier.shape = 16, outlier.size = 1.5, alpha = 0.5) +
   facet_grid(~woa)+
   scale_fill_brewer(palette = "Set1") + 
@@ -159,6 +189,24 @@ ggplot(Distribution  %>% filter((timepoint %in% c("1", "13"))), aes(timepoint, `
 
   theme(plot.title = element_text(hjust = 0.5))
 
+#Anzahl Tiere auf den obeeren beiden Sitzstangen pro woa 
+ Distribution$perches34 <- Distribution$topP+Distribution$midP
+ str(Distribution)
+   ggplot(Distribution %>% filter((timepoint %in% c("13"))), aes(as.factor(woa),`perches34`,fill=treat)) +
+    geom_boxplot(aes(color = treat), outlier.shape = 16, outlier.size = 1.5, alpha = 0.5) +
+    facet_wrap(~woa)+
+    scale_fill_brewer(palette = "Set1") + 
+    scale_color_brewer(palette = "Set1") + 
+    theme_minimal() +
+    labs(
+      title = "Number of animals on the middle perch per treatment and per woa",
+      x = "timepoint",
+      y = "number of animals",
+      fill = "treatment",
+      color = "treatment"
+    ) +
+    theme(plot.title = element_text(hjust = 0.5))
+  
 ### stacked barplot ####
 # Alle Verteilungen unterhalb in eine Kolone bringen
 library(ggplot2)
@@ -219,7 +267,7 @@ Distribution$woa <- as.factor(Distribution$woa)
 #Distribution$timepoint <- as.integer(Distribution$timepoint)
 Distribution$timepoint <- factor(Distribution$timepoint, ordered=T)
 
-less_timepoints <- Distribution  %>% filter((timepoint %in% c("1","13"))) #idealerweise mit 7, wenn mehr Daten (jetzt kann er nicht schätzen)
+less_timepoints <- Distribution  %>% filter((timepoint %in% c("13"))) #idealerweise mit 7, wenn mehr Daten (jetzt kann er nicht schätzen)
 less_woa <- less_timepoints  %>% filter((woa %in% c("5", "7","9","11","13"))) # woa 1 und 3 nicht drin, weil keine Sitzstangennutzung
 str(less_timepoints)
 topP <- glmer(`topP` ~ (treat + woa + timepoint)^3 + (1|pen), family=poisson, data = less_woa)
@@ -239,12 +287,6 @@ topP1 <- glmer(`topP` ~ treat + woa + timepoint +
                 (1|pen), family=poisson, data = less_woa)
 #Likelyhood_ration Test, um zu schauen, ob ^2 und ^3 gleich sind. ^2 ist zu bevorzugen. Wenn  nicht signifikant, kann man ^2 nehmen
 anova(topP,topP1)
-
-#Titt auf, wenn man zu viele Nullen im Modell hat, Varianz ist grösser als der Mittelwert
-library(performance)
-check_overdispersion(topP)
-
-
 
 topP1.wtp <- glmer(`topP` ~ treat + woa + timepoint + 
                  treat:woa +
@@ -280,6 +322,54 @@ emm1 = emmeans(topP1.wtp, specs = pairwise ~ woa:timepoint,type = "response") #t
 emm1
 
 emm1$contrasts
+
+### logistic regression with ceiling effect ####
+# Mein Hauptmodell, zweigt an, welche die topP nutzen, keine Dreifachinteraktion, da 0.969
+Model_perch34 <- glmer(cbind(topP, 20-topP) ~ treat + woa + 
+                         treat:woa +
+                         + (1|pen), family=binomial, data=less_woa)
+Model_perch34.no3w <- glmer(cbind(topP, 20-topP) ~ treat + woa + 
+                              #treat:woa +
+                              + (1|pen), family=binomial, data=less_woa)
+anova(Model_perch34,Model_perch34.no3w)
+
+Model_perch34.woa <- glmer(cbind(topP, 20-topP) ~ treat + #woa + 
+                             #treat:woa +
+                             + (1|pen), family=binomial, data=less_woa)
+anova(Model_perch34.woa,Model_perch34.no3w)
+
+Model_perch34.trt <- glmer(cbind(topP, 20-topP) ~ #treat + 
+                             woa + 
+                             #treat:woa +
+                             + (1|pen), family=binomial, data=less_woa)
+anova(Model_perch34.trt,Model_perch34.no3w)
+# LRT: X2 =10.615, df = 2, P = 0.005 -> treatment
+#Plot für treatment und woa separat machen (die Links von Yamenah)
+library(parameters)
+parameters(Model_perch34.no3w,exponentiate = T)
+#Titt auf, wenn man zu viele Nullen im Modell hat, Varianz ist grösser als der Mittelwert
+library(performance)
+check_overdispersion(Model_perch34)
+
+### logistic regression with ceiling effect both top perches ####
+Model_perch34 <- glmer(cbind((topP+midP), (20-(topP+midP))) ~ treat + woa + I(woa^2)+
+                         treat:woa +
+                         + (1|pen), family=binomial, data=less_woa)
+Model_perch34.no3w <- glmer(cbind((topP+midP), (20-(topP+midP))) ~ treat + woa + 
+                              #treat:woa +
+                              + (1|pen), family=binomial, data=less_woa)
+anova(Model_perch34,Model_perch34.no3w)
+
+Model_perch34.woa <- glmer(cbind((topP+midP), (20-(topP+midP))) ~ treat + #woa + 
+                             #treat:woa +
+                             + (1|pen), family=binomial, data=less_woa)
+anova(Model_perch34.woa,Model_perch34.no3w)
+
+Model_perch34.trt <- glmer(cbind((topP+midP), (20-(topP+midP))) ~ #treat + 
+                             woa + 
+                             #treat:woa +
+                             + (1|pen), family=binomial, data=less_woa)
+anova(Model_perch34.trt,Model_perch34.no3w)
 
 #Anzahl Tiere auf der obersten Sitzstange pro woa 
 ggplot(Distribution  %>% filter((timepoint %in% c("1", "13"))), aes(timepoint, `topP`)) +
