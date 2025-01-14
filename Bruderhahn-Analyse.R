@@ -1,7 +1,8 @@
 # Bruderhahn #
 
 # Distribution ####
-
+setwd("C:/Users/nz24r283/OneDrive/ETH/Masterarbeit_Bruderhahn/Auswertung/Bruderhahn-")
+getwd()
 ## data structure ####
 #"C:/Users/nz24r283/OneDrive/ETH/Masterarbeit_Bruderhahn/Auswertung/Bruderhahn-/Distribution_R.xlsx"
 library(readxl)
@@ -555,4 +556,5 @@ ggplot(weight, aes(treat,weight,)) +
     color = "treatment"
   ) +
   theme(plot.title = element_text(hjust = 0.5),axis.title.x = element_blank())
-
+##Kamm #### 
+##Körperbreite ####
