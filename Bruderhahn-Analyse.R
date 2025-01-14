@@ -1,5 +1,5 @@
 # Bruderhahn #
-#Pfad von G nehmen, damit Yamenah das auch einlesen kann!-> aber dann kann ich nicht mehr von zuhause aus arbeiten
+
 # Distribution ####
 
 ## data structure ####
