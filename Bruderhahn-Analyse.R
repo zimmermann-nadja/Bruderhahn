@@ -114,7 +114,7 @@ ggplot(Distribution, aes(x = timepoint, y = `second floor incl. top ramp`, fill 
 
 #Anzahl Tiere auf der mittleren Sitzstange pro woa 
 Distribution %>% filter(!(timepoint %in% c("2", "6", "11", "12")))
-ggplot(Distribution %>% filter(!(timepoint %in% c("2", "6", "11", "12"))), aes(timepoint, `middle perch`,fill = treat)) +
+ggplot(Distribution %>% filter(!(timepoint %in% c("1", "3"))), aes(timepoint, `middle perch`,fill = treat)) +
   geom_boxplot(aes(color = treat), outlier.shape = 16, outlier.size = 1.5, alpha = 0.5) +
   facet_grid(~woa)+
   scale_fill_brewer(palette = "Set1") + 
@@ -143,6 +143,8 @@ ggplot(Distribution  %>% filter((timepoint %in% c("1", "13"))), aes(timepoint, `
     fill = "treatment",
     color = "treatment"
   ) +
+  scale_x_discrete(labels = c("1" = "dawn", "13" = "dusk"))
+
   theme(plot.title = element_text(hjust = 0.5))
 
 ### stacked barplot ####
@@ -172,15 +174,29 @@ ggplot(stacked.df, aes(fill=Position, y=count, x=timepoint)) +
   facet_wrap(~treat+woa)
 
 
-#timepoint plot
-stacked_sub.df <- stacked.df %>% filter(!(timepoint %in% c("2", "6", "11", "12")))
-View(stacked_sub.df)
+#Distribution of birds per treatment and woa
+stacked_sub.df <- stacked.df %>% 
+  filter(!(timepoint %in% c("2", "6", "11", "12"))) %>%
+  mutate(Position = factor(Position, levels = c(
+    "top perch", 
+    "middle perch", 
+    "second floor perch", 
+    "first floor perch", 
+    "second floor incl. top ramp",
+    "first floor incl. middle ramp", 
+    "litter incl. lowest ramp"
+  )))
 
-ggplot(stacked_sub.df, aes(fill=Position, y=count, x=treat)) +
-  
-  geom_bar(position="fill", stat="identity")+
-  facet_grid(~woa)
-
+ggplot(stacked_sub.df, aes(fill = Position, y = count, x = treat)) +
+  geom_bar(position = "fill", stat = "identity") +
+  facet_grid(~woa)+
+  ggtitle("Distribution of birds per treatment and woa")+
+  labs(
+  title = "Distribution of birds per treatment and woa",  # Diagrammtitel
+  x = "treatment",
+   y = "percentage",    # Bezeichnung der y-Achse
+  fill = "position"               # Bezeichnung der Legende
+)
 
 ## statistic ####
 ### top perch ####
@@ -381,7 +397,9 @@ http://127.0.0.1:12935/graphics/plot_zoom_png?width=833&height=822
 library(readxl)
 library(ggplot2)
 library(tidyr)
-feed_all <- read_excel("C:/Users/nz24r283/OneDrive/ETH/Masterarbeit_Bruderhahn/Auswertung/Bruderhahn-/Futter_R_2.xlsx")
+#feed_all <- read_excel("C:/Users/nz24r283/OneDrive/ETH/Masterarbeit_Bruderhahn/Auswertung/Bruderhahn-/Futter_R_2.xlsx")
+feed_all <- read_excel("C:/Users/nadja/OneDrive/ETH/Masterarbeit_Bruderhahn/Auswertung/Bruderhahn-/Futter_R_2.xlsx")
+  
 feed_tot <- feed_all[,c(-1)]
 names(feed_tot)
 table(feed_tot)
