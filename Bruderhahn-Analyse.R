@@ -189,7 +189,7 @@ ggplot(Distribution  %>% filter((timepoint %in% c("1", "13"))), aes(timepoint, `
 
   theme(plot.title = element_text(hjust = 0.5))
 
-#Anzahl Tiere auf den obeeren beiden Sitzstangen pro woa 
+#Anzahl Tiere auf den oberen beiden Sitzstangen pro woa 
  Distribution$perches34 <- Distribution$topP+Distribution$midP
  str(Distribution)
    ggplot(Distribution %>% filter((timepoint %in% c("13"))), aes(as.factor(woa),`perches34`,fill=treat)) +
@@ -199,14 +199,30 @@ ggplot(Distribution  %>% filter((timepoint %in% c("1", "13"))), aes(timepoint, `
     scale_color_brewer(palette = "Set1") + 
     theme_minimal() +
     labs(
-      title = "Number of animals on the middle perch per treatment and per woa",
+      title = "Number of animals on middle and top perche per treatment and per woa",
       x = "timepoint",
       y = "number of animals",
       fill = "treatment",
       color = "treatment"
     ) +
     theme(plot.title = element_text(hjust = 0.5))
-  
+   
+   
+   ### plot with added model estimates #### ich mache es am Do fertig
+   ggplot(Distribution %>% filter((timepoint %in% c("13"))), aes(as.factor(woa),(`perches34`/20),fill=treat)) +
+     geom_boxplot(aes(color = treat), outlier.shape = 16, outlier.size = 1.5, alpha = 0.5)+
+     geom_line(df$mean)
+   newdat <- less_woa %>% select(treat,woa,pen)
+   newdat$"I(woa^2)"<-(newdat$woa)^2
+   newdat$pred <- predict(Model_perch34,newdata=newdat, type="response")
+   
+   df <- newdat %>% 
+     group_by(treat, woa,"I(woa^2)") %>% 
+     summarise(mean = mean(pred),
+               std = sd(pred))
+   df
+   
+    
 ### stacked barplot ####
 # Alle Verteilungen unterhalb in eine Kolone bringen
 library(ggplot2)
@@ -262,6 +278,7 @@ ggplot(stacked_sub.df, aes(fill = Position, y = count, x = treat)) +
 ### top perch ####
 library(lme4)
 library(optimx)
+
 str(Distribution)
 Distribution$woa <- as.factor(Distribution$woa)
 #Distribution$timepoint <- as.integer(Distribution$timepoint)
@@ -352,24 +369,48 @@ library(performance)
 check_overdispersion(Model_perch34)
 
 ### logistic regression with ceiling effect both top perches ####
+library(lme4)
+str(less_woa)
+
 Model_perch34 <- glmer(cbind((topP+midP), (20-(topP+midP))) ~ treat + woa + I(woa^2)+
                          treat:woa +
-                         + (1|pen), family=binomial, data=less_woa)
-Model_perch34.no3w <- glmer(cbind((topP+midP), (20-(topP+midP))) ~ treat + woa + 
+                         treat:I(woa^2) +
+                         (1|pen), family=binomial, data=less_woa)
+#3way interaction removed forbetter model fit
+summary(Model_perch34)
+#Model_perch34.no3w <- glmer(cbind((topP+midP), (20-(topP+midP))) ~ treat + woa + 
                               #treat:woa +
-                              + (1|pen), family=binomial, data=less_woa)
-anova(Model_perch34,Model_perch34.no3w)
+#                             + (1|pen), family=binomial, data=less_woa)
+#anova(Model_perch34,Model_perch34.no3w)
 
-Model_perch34.woa <- glmer(cbind((topP+midP), (20-(topP+midP))) ~ treat + #woa + 
+#Model_perch34.woa <- glmer(cbind((topP+midP), (20-(topP+midP))) ~ treat + #woa + 
                              #treat:woa +
-                             + (1|pen), family=binomial, data=less_woa)
-anova(Model_perch34.woa,Model_perch34.no3w)
+#                             + (1|pen), family=binomial, data=less_woa)
+#anova(Model_perch34.woa,Model_perch34.no3w)
 
-Model_perch34.trt <- glmer(cbind((topP+midP), (20-(topP+midP))) ~ #treat + 
-                             woa + 
+#Model_perch34.trt <- glmer(cbind((topP+midP), (20-(topP+midP))) ~ #treat + 
+#                             woa + 
                              #treat:woa +
+#                             + (1|pen), family=binomial, data=less_woa)
+#anova(Model_perch34.trt,Model_perch34.no3w)
+
+Model_perch34.tiw <- glmer(cbind((topP+midP), (20-(topP+midP))) ~ treat + woa + I(woa^2)+
+                             treat:woa +
+                             #treat:I(woa^2)+
                              + (1|pen), family=binomial, data=less_woa)
-anova(Model_perch34.trt,Model_perch34.no3w)
+anova(Model_perch34,Model_perch34.tiw)
+
+Model_perch34.tw <- glmer(cbind((topP+midP), (20-(topP+midP))) ~ treat + woa + I(woa^2)+
+                            #treat:woa +
+                            treat:I(woa^2)+
+                            + (1|pen), family=binomial, data=less_woa)
+anova(Model_perch34.tw,Model_perch34)
+
+library(parameters)
+#Ergibt eine schöne Übersicht über die Werte, welche ich brauche
+model_parameters(Model_perch34, exponentiate=T)
+
+
 
 #Anzahl Tiere auf der obersten Sitzstange pro woa 
 ggplot(Distribution  %>% filter((timepoint %in% c("1", "13"))), aes(timepoint, `topP`)) +
@@ -532,7 +573,7 @@ ggplot(feed_tot, aes(treat,feed,)) +
 #Statistik###
 library(lme4)
 library(lmerTest)
-#PEn scheint kein relevanter Faktor gewesen zu sein 
+#Pen scheint kein relevanter Faktor gewesen zu sein 
 model_Futter <- lmer(feed^2~(treat+woa+I(woa^2))^2 + (1|pen), data =feed_tot) # 3fach Interaktion ()^3 nicht sign. kann ersetzt werden durch ^2 because variance explained by pen = 0 ==> removal of random term:
 model_Futter.1 <- lm(feed~(treat+woa+I(woa^2))^2, data =feed_tot)
 anova(model_Futter, model_Futter.1) # yes, we can remove pen: does not explain anything 
