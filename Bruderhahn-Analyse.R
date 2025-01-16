@@ -236,20 +236,6 @@ stacked.df <- Distribution  %>%
 str(stacked.df)
 stacked.df$Position <- as.factor(stacked.df$Position)
 
-
-# Stacked + percent
-ggplot(stacked.df, aes(fill=Position, y=count, x=timepoint)) +
-  geom_bar(position="fill", stat="identity")+
-  facet_grid(~woa)
-
-
-#Stacked nach timepoint und treatment
-ggplot(stacked.df, aes(fill=Position, y=count, x=timepoint)) +
-  geom_bar(position="fill", stat="identity")+
-#  facet_grid(~treat)+
-  facet_wrap(~treat+woa)
-
-
 #Distribution of birds per treatment and woa
 stacked_sub.df <- stacked.df %>% 
   filter(!(timepoint %in% c("2", "6", "11", "12"))) %>%
@@ -441,7 +427,8 @@ plot(simulationOutput)
 
 #Access ####-------------------------------------------------------------------------------------------------------------------------------------
 library(readxl)
-access <- read_excel("C:/Users/nz24r283/OneDrive/ETH/Masterarbeit_Bruderhahn/Auswertung/Bruderhahn-/access_R.xlsx")
+#access <- read_excel("C:/Users/nz24r283/OneDrive/ETH/Masterarbeit_Bruderhahn/Auswertung/Bruderhahn-/access_R.xlsx")
+access <- read_excel("C:/Users/nadja/OneDrive/ETH/Masterarbeit_Bruderhahn/Auswertung/Bruderhahn-/access_R.xlsx")
 
 ## data structure ####
 #Pen und Treatments als Faktor setzen, weil wir brauchen Pen als random term 
@@ -534,7 +521,7 @@ ggplot(access, aes(time,`balancing`, fill = treat)) +
     color = "treatment"
   ) +
   theme(plot.title = element_text(hjust = 0.5),axis.title.x = element_blank())
-http://127.0.0.1:12935/graphics/plot_zoom_png?width=833&height=822
+
 #Feed ####---------------------------------------------------------------------------------------------------------------------------------------
 #Visualisiserung
 library(readxl)
