@@ -115,45 +115,6 @@ ggplot(Distribution, aes(x = timepoint, y = `litter`, fill = treat)) +
   ) +
   theme(plot.title = element_text(hjust = 0.5))
 
-#Anzahl Tiere auf der ersten Etage pro woa 
-ggplot(Distribution, aes(timepoint, `first_floor`,colour = treat)) +
-  geom_point() +   geom_jitter()
-
-ggplot(Distribution, aes(x = timepoint, y = `first_floor`, fill = treat)) +
-  geom_boxplot(aes(color = treat), outlier.shape = 16, outlier.size = 1.5, alpha = 0.5) + 
-  facet_grid(~woa) + 
-  scale_fill_brewer(palette = "Set1") + 
-  scale_color_brewer(palette = "Set1") + 
-  theme_minimal() +
-  labs(
-    title = "Number of animals in first_floor",
-    x = "Zeitpunkt",
-    y = "Verteilung",
-    fill = "Verfahren",
-    color = "Verfahren"
-  ) +
-  theme(plot.title = element_text(hjust = 0.5))
-
-
-#Anzahl Tiere auf der zweiten Etage pro woa 
-ggplot(Distribution, aes(timepoint, `second_floor`,colour = treat)) +
-  geom_point() +   geom_jitter()
-
-ggplot(Distribution, aes(x = timepoint, y = `second_floor`, fill = treat)) +
-  geom_boxplot(aes(color = treat), outlier.shape = 16, outlier.size = 1.5, alpha = 0.5) + 
-  facet_grid(~woa) + 
-  scale_fill_brewer(palette = "Set1") + 
-  scale_color_brewer(palette = "Set1") + 
-  theme_minimal() +
-  labs(
-    title = "Number of animals on the second floor per treatment and per woa",
-    x = "Zeitpunkt",
-    y = "Verteilung",
-    fill = "Verfahren",
-    color = "Verfahren"
-  ) +
-  theme(plot.title = element_text(hjust = 0.5))
-
 #Anzahl Tiere auf der mittleren Sitzstange pro woa 
 Distribution %>% filter(!(timepoint %in% c("2", "6", "11", "12")))
 ggplot(Distribution %>% filter((timepoint %in% c("1", "13"))), aes(timepoint, `midP`,fill = treat)) +
@@ -224,7 +185,7 @@ ggplot(Distribution  %>% filter((timepoint %in% c("1", "13"))), aes(timepoint, `
    
     
 ### stacked barplot ####
-# Alle Verteilungen unterhalb in eine Kolone bringen
+
 library(ggplot2)
 library(dplyr)
 library(tidyr)
@@ -240,25 +201,27 @@ stacked.df$Position <- as.factor(stacked.df$Position)
 stacked_sub.df <- stacked.df %>% 
   filter(!(timepoint %in% c("2", "6", "11", "12"))) %>%
   mutate(Position = factor(Position, levels = c(
-    "top perch", 
-    "middle perch", 
-    "second floor perch", 
-    "first floor perch", 
-    "second floor incl. top ramp",
-    "first floor incl. middle ramp", 
-    "litter incl. lowest ramp"
+    "topP", 
+    "midP", 
+    "second_floor_perch", 
+    "first_floor_perch", 
+    "second_floor",
+    "first_floor", 
+    "litter"
   )))
 
 ggplot(stacked_sub.df, aes(fill = Position, y = count, x = treat)) +
   geom_bar(position = "fill", stat = "identity") +
   facet_grid(~woa)+
+  ggtitle("Distribution of birds per treatment and woa")+
   ggtitle("Distribution of birds during light phase per treatment and woa")+
   labs(
-  title = "Distribution of birds per treatment and woa",  # Diagrammtitel
-  x = "treatment",
-   y = "percentage",    # Bezeichnung der y-Achse
-  fill = "position"               # Bezeichnung der Legende
-)
+    title = "Distribution of birds per treatment and woa",  # Diagrammtitel
+    x = "treatment",
+    y = "percentage",    # Bezeichnung der y-Achse
+    fill = "position"               # Bezeichnung der Legende
+  )
+
 
 ## statistic ####
 ### top perch ####
@@ -522,6 +485,98 @@ ggplot(access, aes(time,`balancing`, fill = treat)) +
   ) +
   theme(plot.title = element_text(hjust = 0.5),axis.title.x = element_blank())
 
+#Hennenminuten####
+##Datensturktur####
+library(readxl)
+library(lme4)
+library(lmerTest)
+Henmin <- read_excel("C:/Users/nadja/OneDrive/ETH/Masterarbeit_Bruderhahn/Auswertung/Bruderhahn-/Hennenminuten_R.xlsx")
+Henmin$pen <- as.factor(Henmin$pen)
+Henmin$treat <- as.factor(Henmin$treat)
+Henmin$timepoint <- as.factor(Henmin$timepoint)
+str(Henmin)
+
+Henmin$latency <- ifelse(Henmin$totP_start>0, (Henmin$Hennensekunden / Henmin$totP_start),NA)
+str(Henmin)
+rm(latency)
+
+## Visualisierung ####
+ggplot(henmin.dawn, aes(x = as.factor(woa), y = latency, fill = treat)) +
+  geom_boxplot(aes(color = treat), outlier.shape = 16, outlier.size = 1.5, alpha = 0.5) + 
+  scale_fill_brewer(palette = "Set1") + 
+  scale_color_brewer(palette = "Set1") + 
+  theme_minimal() +
+  labs(
+    title = "mean duration per bird to leave perches",
+    x = "week of age",
+    y = "seconds",
+    fill = "Verfahren",
+    color = "Verfahren"
+  ) +
+  theme(plot.title = element_text(hjust = 0.5))
+
+##Model####
+henmin.dawn <- subset(Henmin,timepoint == "dawn")
+View(henmin.dawn)
+henmin.dawn$timepoint<-droplevels(henmin.dawn$timepoint) #löscht die leren Zellen
+latency.lme <- lmer(latency ~treat + woa + I(woa^2)+
+      treat:woa+
+      treat:I(woa^2)+
+             (1|pen), data = henmin.dawn,REML=T)
+summary(latency.lme)      
+anova(latency.lme)
+print(latency.lme, correlation=TRUE)
+
+# post hoc tests
+library(emmeans)
+library(pbkrtest)
+#emm.woat <- emmeans(latency.lme, specs = pairwise ~ woa:treat,type = "response")
+#emm.woa2t <- emmeans(latency.lme, specs = pairwise ~ treat:I(woa^2),type = "response")
+
+
+emm.woat <- emmeans(latency.lme, ~ woa|treat, at = list(woa = c(7,9,11,13)))
+pairs(emm.woat)
+plot(emm.woat)
+emm.woa2t <- emmeans(latency.lme, ~ I(woa^2)|treat, at = list(woa = c(7,9,11,13)))
+pairs(emm.woa2t)
+#Wieso sind die Sekunden im Verlaufe der woa negativ? Sie brauchen ja mehr Zeit für den Abstieg, nicht mehr?
+
+#Model assumptions
+## ----ResidClassLme, eval= FALSE-----------------------------------------------
+par (mfrow= c (3, 3)) # alle Teilabbildungen gemeinsam anschauen
+
+ qqnorm (resid (latency.lme))
+
+ qqnorm (unlist (ranef (latency.lme, level= 1))) # für jeden geschachtelten zufäll. Effekt
+
+
+
+ scatter.smooth (fitted (latency.lme), resid (latency.lme))
+
+ boxplot (split (resid (latency.lme), Henmin [, 'treat'])) # für jede erklärende Variable
+ boxplot (split (resid (latency.lme), Henmin [, 'woa']))
+
+ dev.off ()
+
+ 
+ 
+ 
+ 
+## ----ResidDHARMa, eval= FALSE-------------------------------------------------
+
+## library ('DHARMa')
+
+##
+
+## sim.res <- simulateResiduals (model)
+
+##
+
+## plot (sim.res)
+
+##
+
+## plotResiduals (sim.res, data.df [, 'VarX'])
 #Feed ####---------------------------------------------------------------------------------------------------------------------------------------
 #Visualisiserung
 library(readxl)
@@ -649,6 +704,8 @@ plot(feed_tot$pen, feed_tot$feed) # varianz durch pen sehr klein, fast 0
 model_Futter <- lm(feed^2~(treat+woa+ I(woa^2))^3 , data =feed_tot)
 
 summary(model_Futter)
+
+
 #Health ####-------------------------------------------------------------------------------------------------------------------------------------
 ##Gewicht #### 
 #Visualisiserung
