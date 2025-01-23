@@ -173,7 +173,7 @@ ggplot(Distribution  %>% filter((timepoint %in% c("1", "13"))), aes(timepoint, `
     theme(plot.title = element_text(hjust = 0.5))
    
    
-   ### plot with added model estimates #### ich mache es am Do fertig
+   ### plot with added model estimates #### ich mache es am Do fertig -> bei allen Plots dann ergänzen, wo man am Schluss eine Statistik dazu gibt 
    ggplot(Distribution %>% filter((timepoint %in% c("13"))), aes(as.factor(woa),(`perches34`/20),fill=treat)) +
      geom_boxplot(aes(color = treat), outlier.shape = 16, outlier.size = 1.5, alpha = 0.5)+
      geom_line(data=df, aes(woa,mean))
@@ -238,6 +238,7 @@ ggplot(stacked_sub.df, aes(fill = Position, y = count, x = timepoint)) +
     y = "percentage",    # Bezeichnung der y-Achse
     fill = "position"               # Bezeichnung der Legende
   )
+#NZ: timepoint_cut machen 
 
 ## statistic ####
 ### top perch ####
@@ -248,11 +249,22 @@ str(Distribution)
 Distribution$woa <- as.factor(Distribution$woa)
 #Distribution$timepoint <- as.integer(Distribution$timepoint)
 Distribution$timepoint <- factor(Distribution$timepoint, ordered=T)
+less_woa_sub$timepoint <-as.factor(less_woa_sub$timepoint)
+less_woa_sub$woa <-as.factor(less_woa_sub$woa)
+less_woa_sub$woa
+#less_timepoints <- Distribution  %>% filter((timepoint %in% c("1","13"))) 
+less_woa_sub_perch <- less_woa_sub  %>% filter((woa %in% c("5", "7","9","11","13"))) # woa 1 und 3 nicht drin, weil keine Sitzstangennutzung
 
-less_timepoints <- Distribution  %>% filter((timepoint %in% c("13"))) 
-less_woa <- less_timepoints  %>% filter((woa %in% c("5", "7","9","11","13"))) # woa 1 und 3 nicht drin, weil keine Sitzstangennutzung
-str(less_timepoints)
-topP <- glmer(`topP` ~ (treat + woa + timepoint)^3 + (1|pen), family=poisson, data = less_woa)
+less_woa_sub_perch_tp <- less_woa_sub_perch %>% filter((timepoint_cat %in% c("dusk", "dawn")))
+str(less_woa_sub_perch)
+less_woa_sub_perch$woa
+str( less_woa_sub_perch_tp)
+less_woa_sub_perch_tp$timepoint_cat <- factor(less_woa_sub_perch_tp$timepoint_cat, ordered=T)
+less_woa_sub_perch_tp$treat <- factor(less_woa_sub_perch_tp$treat)
+                                      
+topP <- glmer(`topP` ~ (treat + woa + timepoint)^3 + (1|pen), family=poisson, data = less_woa_sub)
+
+
 
 topP <- glmer(`topP` ~ treat + woa + timepoint + 
                 treat:woa +
@@ -306,48 +318,106 @@ emm1
 
 emm1$contrasts
 
+#check assumptions of poisson?
+# Pearson's goodness-of-fit
+library(DHARMa)
+testDispersion(topP1.wtp)
+simulationOutput <- simulateResiduals(fittedModel = topP1.wtp, plot = F)
+residuals(simulationOutput)
+residuals(simulationOutput, quantileFunction = qnorm, outlierValues = c(-7,7))
+plot(simulationOutput)
+
+
 #### logistic regression with ceiling effect ####
 # Mein Hauptmodell, zweigt an, welche die topP nutzen, keine Dreifachinteraktion, da 0.969
-Model_perch34 <- glmer(cbind(topP, 20-topP) ~ treat + woa + I(woa^2)+
+Model_perch4 <- glmer(cbind(topP, 20-topP) ~ treat + woa + I(woa^2)+
                          treat:woa +
                          treat:I(woa^2)+
                          woa:I(woa^2)+
                          (1|pen), family=binomial, data=less_woa)
-Model_perch34.no3w <- glmer(cbind(topP, 20-topP) ~ treat + woa + 
+Model_perch4.no3w <- glmer(cbind(topP, 20-topP) ~ treat + woa + 
                               #treat:woa +
                               + (1|pen), family=binomial, data=less_woa)
-anova(Model_perch34,Model_perch34.no3w)
+anova(Model_perch4,Model_perch4.no3w)
 
-Model_perch34.woa <- glmer(cbind(topP, 20-topP) ~ treat + #woa + 
+Model_perch4.woa <- glmer(cbind(topP, 20-topP) ~ treat + #woa + 
                              #treat:woa +
                              + (1|pen), family=binomial, data=less_woa)
-anova(Model_perch34.woa,Model_perch34.no3w)
+anova(Model_perch4.woa,Model_perch4.no3w)
 
-Model_perch34.trt <- glmer(cbind(topP, 20-topP) ~ #treat + 
+Model_perch4.trt <- glmer(cbind(topP, 20-topP) ~ #treat + 
                              woa + 
                              #treat:woa +
                              + (1|pen), family=binomial, data=less_woa)
-anova(Model_perch34.trt,Model_perch34.no3w)
+anova(Model_perch4.trt,Model_perch4.no3w)
 
 # LRT: X2 =10.615, df = 2, P = 0.005 -> treatment
 #Plot für treatment und woa separat machen (die Links von Yamenah)
 
 
 library(parameters)
-parameters(Model_perch34.no3w,exponentiate = T)
+parameters(Model_perch4.no3w,exponentiate = T)
 #Titt auf, wenn man zu viele Nullen im Modell hat, Varianz ist grösser als der Mittelwert
 library(performance)
-check_overdispersion(Model_perch34)
+check_overdispersion(Model_perch4)
+
+
 
 ### both perches ####
 #### logistic regression with ceiling effect both perches ####
 library(lme4)
 str(less_woa)
 
-Model_perch34 <- glmer(cbind((topP+midP), (20-(topP+midP))) ~ treat + woa + I(woa^2)+
-                         treat:woa +
-                         treat:I(woa^2) +
+Model_perch34 <- glmer(cbind((topP+midP), (20-(topP+midP))) ~ treat + timepoint_cat + scale(woa) + I((scale(woa)^2))+
+                         treat:timepoint_cat+
+                         treat:scale(woa) +
+                         treat:I((scale(woa)^2)) +
+                         (1|pen), family=binomial, data=less_woa_sub_perch_tp)
+summary(Model_perch34)
+# > 10 ist eine Multi..., dann muss man scale machen -> dies noch bei litter und second floor überprüfen
+# dies bei allen anpassen, wenn der vif Wert über 10 ist, dann bei den anderen auch überall scale nehmen 
+library(car)
+vif(Model_perch34)
+
+Model_perch34.tiw <- glmer(cbind((topP+midP), (20-(topP+midP))) ~ treat + timepoint_cat + scale(woa) + I((scale(woa)^2))+
+                         treat:timepoint_cat+
+                         treat:scale(woa) +
+                         ##treat:I((scale(woa)^2)) +
+                         (1|pen), family=binomial, data=less_woa_sub_perch_tp)
+anova(Model_perch34,Model_perch34.tiw)
+
+Model_perch34.tw <- glmer(cbind((topP+midP), (20-(topP+midP))) ~ treat + timepoint_cat + scale(woa) + I((scale(woa)^2))+
+                             treat:timepoint_cat+
+                             #treat:scale(woa) +
+                             treat:I((scale(woa)^2)) +
+                             (1|pen), family=binomial, data=less_woa_sub_perch_tp)
+anova(Model_perch34,Model_perch34.tw)
+
+
+less_woa_sub_perch_tp$woa_scaled <- scale(less_woa_sub_perch_tp$woa)
+less_woa_sub_perch_tp$woa_scaled_I <- (less_woa_sub_perch_tp$woa_scaled)^2
+dim(less_woa_sub_perch_tp$woa_scaled)
+Model_perch34.tt <- glmer(cbind((topP+midP), (20-(topP+midP))) ~ treat + timepoint_cat + scale(woa) + I((scale(woa)^2))+
+                            #treat:timepoint_cat+
+                            treat:scale(woa) +
+                            treat:I((scale(woa)^2)) +
+                            (1|pen), family=binomial, data=less_woa_sub_perch_tp)
+anova(Model_perch34,Model_perch34.tt)
+
+Model_perch34.iw <- glmer(cbind((topP+midP), (20-(topP+midP))) ~ treat + timepoint_cat + scale(woa) + ##I((scale(woa)^2))+
+                            treat:timepoint_cat+
+                            treat:scale(woa) +
+                            #treat:I((scale(woa)^2)) +
+                            (1|pen), family=binomial, data=less_woa_sub_perch_tp)
+anova(Model_perch34,Model_perch34.iw)
+
+
+## Momdel without timepoint_cat
+Model_perch34 <- glmer(cbind((topP+midP), (20-(topP+midP))) ~ treat + scale(woa) + I((scale(woa)^2))+
+                         treat:scale(woa) +
+                         treat:I((scale(woa)^2)) +
                          (1|pen), family=binomial, data=less_woa)
+
 #3way interaction not interpretable on a biological level 
 summary(Model_perch34)
 Model_perch34.tiw <- glmer(cbind((topP+midP), (20-(topP+midP))) ~ treat + woa + I(woa^2)+
@@ -383,7 +453,7 @@ library(emmeans)
 Model_perch34.tiw <- glmer(cbind((topP+midP), (20-(topP+midP))) ~ treat + woa + I(woa^2)+
                              treat:woa +
                              #treat:I(woa^2)+
-                             + (1|pen), family=binomial, data=less_woa)
+                             + (1|pen), family=binomial, data=less_woa_sub_perch_tp)
 
 emmeans::emmip(Model_perch34.tiw,  ~ treat | woa)
 emm_interaction <- emmeans(Model_perch34.tiw, ~ treat * woa, type="response") #This calculates the estimated marginal means for treat at different values of woa (by default, at the mean of woa).
@@ -398,15 +468,6 @@ print(interaction_comparisons_custom)
 
 
 
-#check assumptions of poisson?
-# Pearson's goodness-of-fit
-library(DHARMa)
-testDispersion(topP1.wtp)
-simulationOutput <- simulateResiduals(fittedModel = topP1.wtp, plot = F)
-residuals(simulationOutput)
-residuals(simulationOutput, quantileFunction = qnorm, outlierValues = c(-7,7))
-plot(simulationOutput)
-
 ### Litter use logistic regression #### 
 #nur 4 bis 16 uhr, da der Rest 0
 daytime <- Distribution %>% filter(!(timepoint %in% c("1","2","6", "11", "12","13")))
@@ -416,7 +477,7 @@ Model_litter <- glmer(cbind(litter, (20-litter)) ~ treat + woa + I(woa^2)+ timep
                         treat:I(woa^2)+
                         treat:timepoint+
                         woa:timepoint+
-                        #I(woa^2):timepoint+
+                        I(woa^2):timepoint+
                         (1|pen), family=binomial, data=daytime)
 summary(Model_litter)
 
@@ -454,12 +515,11 @@ anova(Model_litter,Model_litter.tt)
 #EINSCHUB YG ####
 
 # Second floor incl second floor perch use ####
-Distribution$woa <- as.factor(Distribution$woa)
+Distribution$woa <- as.factor(Distribution$woa) #
 #Distribution$timepoint <- as.integer(Distribution$timepoint)
 Distribution$timepoint <- factor(Distribution$timepoint, ordered=T)
 
-#less_timepoints <- Distribution  %>% filter((timepoint %in% c("1","13"))) #idealerweise mit 7, wenn mehr Daten (jetzt kann er nicht schätzen)
-less_woa <- Distribution  %>% filter((woa %in% c("1","3","5", "7","9","11","13"))) # woa 1 und 3 nicht drin, weil keine Sitzstangennutzung
+less_woa <- Distribution  %>% filter((woa %in% c("1","3","5", "7","9","11","13"))) #kann ich auch Distribution nehmen?
 str(less_woa)
 less_woa$woa
 less_woa$secondfloor_use <- less_woa$second_floor+less_woa$second_floor_perch
@@ -500,12 +560,13 @@ less_woa %>%
 
 # based on this plot: we pool timepoints between dusk and dawn: like for litter: getting here three timepoints: dusk, light, dawn
 # Combine factor levels into 3 new levels
+less_woa$woa
 less_woa_sub <- less_woa %>%
   mutate(
     timepoint_cat = case_when(
-      timepoint %in% c("1") ~ "morning",           # forgot whether dusk or dawn ;-)
+      timepoint %in% c("1") ~ "dawn",           # forgot whether dusk or dawn ;-)
       timepoint %in% c("3", "4","5","7","8","9","10") ~ "light", # time of day between dusk and dawn
-      timepoint %in% c("13") ~ "evening", 
+      timepoint %in% c("13") ~ "dusk", 
       TRUE ~ "Other"                                   # Keep other values as 'Other'
     )
   )
@@ -688,6 +749,7 @@ Henmin$treat <- as.factor(Henmin$treat)
 Henmin$timepoint <- as.factor(Henmin$timepoint)
 str(Henmin)
 
+#Mrogen-> alle abziehen, welche noch dazugekommen sind 
 Henmin$latency <- ifelse(Henmin$totP_start>0, (Henmin$Hennensekunden / Henmin$totP_start),NA)
 str(Henmin)
 rm(latency)
@@ -865,6 +927,8 @@ ggplot(access, aes(time,`balancing`, fill = treat)) +
   theme(plot.title = element_text(hjust = 0.5),axis.title.x = element_blank())
 
 # MOVEMENT M+ only: Ramp use ####
+#Kolone mit Summe fehlt -> noch ergänzen, für Ratio zu machen 
+
 male_move<- read_excel("D:/Projekt_Bruderhaehne/Auswertung/Bruderhahn_Analysis/ramp_use_males.xlsx")
 # NZ: add in the excel file following two variables:
 # total_movers_up (sum up number_birds of ramp use yes AND no of movement_direction = up)
@@ -874,13 +938,16 @@ str(male_move)
 male_move$pen <- as.factor(male_move$pen)
 male_move$treat <- as.factor(male_move$treat)
 male_move$time <- as.factor(male_move$time)
-male_move$Movement_direction <- as.factor(male_move$Movement_direction)
+male_move$Movement_direction <- as.factor(male_move$Movement_direction) 
 male_move$ramp_use <- as.factor(male_move$ramp_use)
 
 # subset dateset for M+ only
 # NZ ADD GGPLOT WITH timepoint, rmap_use, movement_direction and woa ####
 maleR <- subset(male_move, treat =="M+")
-mov.fit <- lmer(number_birds ~ ramp_use + woa + Movement_direction)
+mov.fit <- glmer(number_birds ~ ramp_use + woa + Movement_direction, family = poisson, data = maleR)
+# falls es nicht schön aufgeht, mit ratios rechnen (number_birds/summe_tot) ~ramp_use, data = maleR
+# Wenn WArnmeldungen oder Standard deviations grösser sind als 
+mov.fit <- glmer((number_birds/summe_tot) ~ramp_use, data = maleR ~ ramp_use + woa + Movement_direction, data = maleR) # Up and down separate Tests machen, dann kann direction als FAktor entfernen, brauche aber die Summe von up and down einzeln
 
 # NZ: add ggplot of percentage of birds oder ratio of birds using or not using ramps by movement direction and woa
 # NZ: ggplot of dusk-mid-dawn, woa and rmap use yes/no
