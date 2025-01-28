@@ -105,7 +105,7 @@ summary(model_Futter)
 #Random effects:
 #Groups   Name        Variance  Std.Dev.
 #pen      (Intercept) 1.721e-05 0.004149
-#Residual             3.540e-04 0.018814 -> Pen erklärt 4.6 % der Varianz, deshalb lassen wir es drin als random term
+#Residual             3.540e-04 0.018814 -> Pen erklärt 4.6 % der Varianz, deshalb lassen wir es drin als random term (ab rund 5%)
 
 plot(feed_tot$pen, feed_tot$feed) # varianz durch pen sehr klein, fast 0
 
@@ -209,24 +209,25 @@ modell.pred [['Upper']]
 library(readxl)
 library(ggplot2)
 library(tidyr)
-
+#wenn ein Faktor quadratisch verwendet wird, dann numerisch weil ein Faktro nicht quadratisch gerechnet werden kann 
 #weight <- read_excel("C:/Users/nz24r283/OneDrive/ETH/Masterarbeit_Bruderhahn/Auswertung/Bruderhahn-/Gewicht_R.xlsx")
 weight_all <- read_excel("C:/Users/nadja/OneDrive/ETH/Masterarbeit_Bruderhahn/Auswertung/Bruderhahn-/Gewicht_R.xlsx")
-
-weight <- weight_all[,c(-1)]
+str(weight_all)
+hist(weight_all$weight)
+weight.df <- weight_all[,c(-1)]
 names(weight)
 table(weight)
 
-str()
+str(weight)
 summary(weight)
 View(weight)
 str(weight)
-weight$woa <- as.integer(weight$woa) #weil ein quadratischer Term und diese dann kein Faktor sein kann
+weight$woa <- as.factor(weight$woa) 
 weight$pen <- as.factor(weight$pen)
 weight$treat <- as.factor(weight$treat)
 weight$weight <- as.numeric(weight$weight)
 
-ggplot(weight, aes(treat,weight,)) +
+ggplot(weight_all, aes(treat,weight,)) +
   geom_boxplot(aes(color = treat), outlier.shape = 16, outlier.size = 1.5, alpha = 0.5) +
   facet_grid(~woa) +
   scale_fill_brewer(palette = "Set1") +
@@ -239,5 +240,67 @@ ggplot(weight, aes(treat,weight,)) +
     color = "treatment"
   ) +
   theme(plot.title = element_text(hjust = 0.5),axis.title.x = element_blank())
-##Kamm #### 
+
+#Log genommen, damit Model assumptions besser werden
+model_weight <- lmer(log(weight)~(treat+as.factor(woa))^2 + (1|pen), data =weight.df) 
+anova(model_weight)
+
+#Global average effekt: Wie viel erklärt mein volles Modell zu keinem Modell
+model_Futter0 <- lmer(feed~ 1+ (1|pen), data =feed_tot_less_woa) # Intercept only model, nur random effekt wird betrachtet
+summary(model_Futter0) #Pen ist 0 -> erklärt das Modell nicht
+modell.null.p <- PBmodcomp (model_Futter, model_Futter0) 
+summary (modell.null.p) #unser Modell ist signifikant unterschieden zu einem leren Modell -> Ist gut, unser Model erklärt
+
+### model assumptions ####
+par (mfrow= c (3, 3)) # alle Teilabbildungen gemeinsam anschauen
+qqnorm (resid (model_weight))
+qqline(resid(model_weight))
+qqnorm (unlist (ranef (model_weight, level= 1))) # für jeden geschachtelten zufäll. Effekt
+scatter.smooth (fitted (model_weight), resid (model_weight))
+boxplot (split (resid (model_weight), feed_tot [, 'pen'])) # für jede erklärende Variable
+
+summary(model_weight)
+
+
+#Random effects:
+#  Groups   Name        Variance Std.Dev.
+#pen      (Intercept) 0.000029 0.005385
+#Residual             0.005902 0.076825-> Pen erklärt 0.5 % der Varianz, deshalb brauchen wir den random term nicht? 
+# -> funktioniert ohne Pen nicht, weil error no random effects terms specified in formula
+#Futter hatte einen Pen-Effekt aber GEwicht nicht: Gewisse Pens haben mehr Futter rausgescharrt / verschwendet als andere
+
+plot(weight.df$pen, weight.df$weight) # varianz durch pen sehr klein, fast 0
+
+
+#p-Wert(e) Einzeleffekte berechnen
+
+anova (model_weight, type= 'marginal')
+
+anova (model_weight)
+#für jeden Haupteffekt und jede Interaktion (je einmal weglassen)
+modell.weight.tw.lmer <- lmer (weight ~ treat + # einmal weglassen: Haupteffekt VarA1
+                          
+                          woa + # einmal weglassen: Haupteffekt VarB1
+                          
+                          #treat:woa + # einmal weglassen: 1. Zweifachinteraktion
+                          
+                          (1 | pen),
+                        
+                        weight.df, REML= FALSE)
+
+summary (modell.weight.tw.lmer)
+
+# Bootstrap test 
+modell.weight.tw.p <- PBmodcomp (model_weight, modell.weight.tw.lmer)
+summary (modell.tw.p)
+#LRT      55.687  2.000        8.085e-13 *** #-> dasselbe wie anova, für den Bericht relevant
+#PBtest   55.687                0.000999 *** #-> zeigt noch die Robustheit an 
+anova(modell.tw.lmer, model_weight)
+
+# Kann es nicht rechnen, wahrscheinlich wegen log -> werde heute Abend noch probieren
+
+#bei emmeans type response einfügen, damit ich keine Log skala habe
+
+##Kamm ####
+
 ##Körperbreite ####
