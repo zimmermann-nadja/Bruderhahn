@@ -158,7 +158,7 @@ theme(plot.title = element_text(hjust = 0.5))
 #Anzahl Tiere auf den oberen beiden Sitzstangen pro woa 
 Distribution$perches34 <- Distribution$topP+Distribution$midP
 str(Distribution)
-ggplot(Distribution %>% filter((timepoint %in% c("1","13"))), aes(timepoint,`perches34`,fill=treat)) +
+ggplot(Distribution %>% filter((timepoint %in% c("13"))), aes(timepoint,`perches34`,fill=treat)) +
   geom_boxplot(aes(color = treat), outlier.shape = 16, outlier.size = 1.5, alpha = 0.5) +
   facet_grid(~woa)+ #oder wrap
   scale_fill_brewer(palette = "Set1") + 
@@ -325,6 +325,7 @@ topP1 <- glmer(`topP` ~ treat + woa_s + timepoint +
                  (1|pen), family=poisson, data = less_woa)
 #Likelyhood_ration Test, um zu schauen, ob ^2 und ^3 gleich sind. ^2 ist zu bevorzugen. Wenn  nicht signifikant, kann man ^2 nehmen
 anova(topP,topP1)
+
 
 topP1.wtp <- glmer(`topP` ~ treat + woa_s + timepoint + 
                      treat:woa_s +
@@ -609,7 +610,7 @@ anova(Model_litter,Model_litter.tt)
 #Distribution$timepoint <- as.integer(Distribution$timepoint)
 Distribution$timepoint <- factor(Distribution$timepoint, ordered=T)
 
-all_woa <- Distribution  %>% filter((woa %in% c("1","3","5", "7","9","11","13"))) # woa 1 und 3 nicht drin, weil keine Sitzstangennutzung
+all_woa <- Distribution  %>% filter((woa %in% c("1","3","5", "7","9","11","13")))
 all_woa$secondfloor_use <- all_woa$second_floor+all_woa$second_floor_perch
 hist(all_woa$secondfloor_use)
 all_woa$pen <- as.factor(all_woa$pen)
@@ -789,12 +790,16 @@ ggplot(access, aes(time,`2_floor_to_mP_ramp`, fill = treat)) +
   ) +
   theme(plot.title = element_text(hjust = 0.5),axis.title.x = element_blank())
 
-# EINSCHUB YG ####
-#MOVEMENT####
+#Movement tot movers####
+library(readxl)
+library(ggplot2)
+library(lme4)
 moving <- read_excel("D:/Projekt_Bruderhaehne/Auswertung/Bruderhahn_Analysis/Moving_R.yg.xlsx")
+moving <- read_excel("C:/Users/nadja/OneDrive/ETH/Masterarbeit_Bruderhahn/Auswertung/Bruderhahn-Moving_R.yg.xlsx")
+moving <- read_excel("C:/Users/nz24r283/OneDrive/ETH/Masterarbeit_Bruderhahn/Auswertung/Bruderhahn-/Moving_R.yg.xlsx")
 str(moving)
 
-### NZ: Frage an dich: Wurde Falling während Morgendämmerung oder Abenddämmerung oder bei beidem angeschaut (und pro timepoint sowohl aufwärts und abwärtsbewegung oder nur entweder/oder)? ####
+#NZ: Frage an dich: Wurde Falling während Morgendämmerung oder Abenddämmerung oder bei beidem angeschaut (und pro timepoint sowohl aufwärts und abwärtsbewegung oder nur entweder/oder)? 
 # falls nicht unterscheidbar ob auf- oder abwärtsbewegung für die beiden dimming phasen: dann einfach im Excel beide Kolonnen zusammenzählen zu zb "total_movers" = number_birds_up + number_birds_down
 moving$number_birds_down # number of birds going to perches 3 and or 4 if falling is observed during upwards movement (evening) only:
 moving$number_birds_up # number of birds leaving perches 3 and or 4 if falling is observed during downwards movement (morning) only:
@@ -814,25 +819,28 @@ residuals(simulationOutput)
 residuals(simulationOutput, quantileFunction = qnorm, outlierValues = c(-7,7))
 plot(simulationOutput)
 
-#Übersicht falling
+##Übersicht falling ####
 
 ggplot(moving, aes(time,falling/number_birds_down, fill = treat)) +
   geom_boxplot(aes(color = treat), outlier.shape = 16, outlier.size = 1.5, alpha = 0.5) +
   facet_grid(~woa) 
 
 # NZ ADD THE SAME WAY BALANCING and "trail and fail"
+
+
 # NZ was ist nochmals definition von trail and fail? sind diese abgestürzt (=falling)?
 
 
-#Movement####------------------------------------------------------------------------------------------------------------------------------------
+#Movement Hennenminuten ####------------------------------------------------------------------------------------------------------------------------------------
 library(ggplot2)
 library(lme4)
-#Hennenminuten####
-##Datensturktur####
 library(readxl)
 library(lme4)
 library(lmerTest)
 Henmin <- read_excel("C:/Users/nadja/OneDrive/ETH/Masterarbeit_Bruderhahn/Auswertung/Bruderhahn-/Hennenminuten_R.xlsx")
+Henmin <- read_excel("C:/Users/nz24r283/OneDrive/ETH/Masterarbeit_Bruderhahn/Auswertung/Bruderhahn-/Hennenminuten_R.xlsx")
+
+## Datenstruktur ####
 Henmin$pen <- as.factor(Henmin$pen)
 Henmin$treat <- as.factor(Henmin$treat)
 Henmin$timepoint <- as.factor(Henmin$timepoint)
@@ -959,64 +967,12 @@ residuals(simulationOutput, quantileFunction = qnorm, outlierValues = c(-7,7))
 plot(simulationOutput)
 
 
-#Übersicht falling
 
-ggplot(access, aes(time,`falling`, fill = treat)) +
-  geom_boxplot(aes(color = treat), outlier.shape = 16, outlier.size = 1.5, alpha = 0.5) +
-  facet_grid(~woa) +
-  scale_fill_brewer(palette = "Set1") +
-  scale_color_brewer(palette = "Set1") + 
-  theme_minimal() +
-  scale_x_discrete(
-    limits = c("dust", "mid", "dawn") # Hier die gewünschte Reihenfolge festlegen
-  ) +
-  labs(
-    title = "number of fallings per woa",
-    y = "number of animals",
-    fill = "treatment",
-    color = "treatment"
-  ) +
-  theme(plot.title = element_text(hjust = 0.5),axis.title.x = element_blank())
 
-#Übersicht tried and failed 
-ggplot(access, aes(time,`tried_and_failed`, fill = treat)) +
-  geom_boxplot(aes(color = treat), outlier.shape = 16, outlier.size = 1.5, alpha = 0.5) +
-  facet_grid(~woa) +
-  scale_fill_brewer(palette = "Set1") +
-  scale_color_brewer(palette = "Set1") + 
-  theme_minimal() +
-  scale_x_discrete(
-    limits = c("dust", "mid", "dawn") # Hier die gewünschte Reihenfolge festlegen
-  ) +
-  labs(
-    title = "number of tried and failed per woa",
-    y = "number of animals",
-    fill = "treatment",
-    color = "treatment"
-  ) +
-  theme(plot.title = element_text(hjust = 0.5),axis.title.x = element_blank())
-
-#Übersicht balancing 
-ggplot(access, aes(time,`balancing`, fill = treat)) +
-  geom_boxplot(aes(color = treat), outlier.shape = 16, outlier.size = 1.5, alpha = 0.5) +
-  facet_grid(~woa) +
-  scale_fill_brewer(palette = "Set1") +
-  scale_color_brewer(palette = "Set1") + 
-  theme_minimal() +
-  scale_x_discrete(
-    limits = c("dusk", "mid", "dawn") # Hier die gewünschte Reihenfolge festlegen
-  ) +
-  labs(
-    title = "number of balancing per woa",
-    y = "number of animals",
-    fill = "treatment",
-    color = "treatment"
-  ) +
-  theme(plot.title = element_text(hjust = 0.5),axis.title.x = element_blank())
-
-# Ramp use - M+ only ####
+----------# Ramp use - M+ only ####---------------------------------------------------------------------------------------
 male_move<- read_excel("D:/Projekt_Bruderhaehne/Auswertung/Bruderhahn_Analysis/Moving_R.yg.xlsx")
 male_move<- read_excel("C:/Users/nadja/OneDrive/ETH/Masterarbeit_Bruderhahn/Auswertung/Bruderhahn-/ramp_use_males.nz.xlsx")
+male_move <- read_excel("C:/Users/nz24r283/OneDrive/ETH/Masterarbeit_Bruderhahn/Auswertung/Bruderhahn-/ramp_use_males.nz.xlsx")
 
 # NZ: add in the excel file following two variables:
 # total_movers_up (sum up number_birds of ramp use yes AND no of movement_direction = up)
@@ -1042,6 +998,7 @@ maleR <- subset(male_move, treat =="M+") # subset dateset for M+ only
 # NA-Werte in ramp_use entfernen, Reihenfolge von Zeit definieren
 library(ggplot2)
 library(dplyr)
+library(tidyr)
 
 maleR_filtered <- maleR %>%
   filter(!is.na(direct), !is.na(ramp)) %>% # Entfernt NAs aus direct und rampe
@@ -1099,21 +1056,36 @@ ggplot(maleR_filtered, aes(x = time, y = `ramp_use`, fill = direction)) +
 # NZ: ggplot of dusk-mid-dawn, woa and rmap use yes/no -> ?
 
 ## Model ####
-mov.fit <- lmer(total ~ ramp_use + woa_s + direction, data=maleR)
+library(lmerTest)
+model_ramp_woatd <- lmer(ramp_use ~ (woa_s + direction + time)^3 + (1|pen), data=maleR)
+summary (model_ramp_woatd)
 
-#Feed ####---------------------------------------------------------------------------------------------------------------------------------------
+model_ramp <- lmer(ramp_use ~ (woa_s + direction)^2 + (1|pen), data=maleR)
+summary(model_ramp)
+
+model_ramp_woa <- lmer(ramp_use ~ (woa_s) + (woa_s)^2 + (1|pen), data=maleR)
+
+anova(model_ramp, model_ramp_woa)
+#Keine Verbesserung des Models mit direction term drin 
+
+
+
+#Feed ####-----------------------------------------------------------------------------------------------------------------------------------------------------------------------
+# Für das ganze Pen ####
 ##Visualisiserung ####
 library(readxl)
 library(ggplot2)
 library(tidyr)
-#feed_all <- read_excel("C:/Users/nz24r283/OneDrive/ETH/Masterarbeit_Bruderhahn/Auswertung/Bruderhahn-/Futter_R_2.xlsx")
+feed_all <- read_excel("C:/Users/nz24r283/OneDrive/ETH/Masterarbeit_Bruderhahn/Auswertung/Bruderhahn-/Futter_R_2.xlsx")
 feed_all <- read_excel("C:/Users/nadja/OneDrive/ETH/Masterarbeit_Bruderhahn/Auswertung/Bruderhahn-/Futter_R_2.xlsx")
 
 feed_tot <- feed_all[,c(-1)]
 names(feed_tot)
 table(feed_tot)
 feed_tot= subset(feed_tot, woa !="13")
-str()
+feed_tot$woa_s <- scale(feed_tot$woa)
+feed_tot$feed_animal <- feed_tot$feed / 20 *1000
+str(feed_tot)
 summary(feed_tot)
 View(feed_tot)
 str(feed_tot)
@@ -1122,19 +1094,45 @@ feed_tot$pen <- as.factor(feed_tot$pen)
 feed_tot$treat <- as.factor(feed_tot$treat)
 feed_tot$feed <- as.numeric(feed_tot$feed)
 
+# ganzes Pen
+custom_labeller <- as_labeller(c(
+  "2" = "1-2 woa",
+  "4" = "3-4 woa",
+  "6" = "5-6 woa",
+  "8" = "7-8 woa",
+  "10" = "9-10 woa",
+  "12" = "11-12 woa"
+  ))
+
 ggplot(feed_tot, aes(treat,feed,)) +
   geom_boxplot(aes(color = treat), outlier.shape = 16, outlier.size = 1.5, alpha = 0.5) +
-  facet_grid(~woa) +
+  facet_grid(~woa, labeller = (woa=custom_labeller)) +
   scale_fill_brewer(palette = "Set1") +
   scale_color_brewer(palette = "Set1") + 
   theme_minimal() +
   labs(
-    title = "feed use per pen of 20 animals",
+    title = "feed use per pen (20 animals)",
     y = "feed use [kg]",
     fill = "treatment",
     color = "treatment"
   ) +
+theme(plot.title = element_text(hjust = 0.5),axis.title.x = element_blank())
+
+# Auf das Tier runtergerechnet in gramm 
+ggplot(feed_tot, aes(treat,feed,)) +
+  geom_boxplot(aes(color = treat), outlier.shape = 16, outlier.size = 1.5, alpha = 0.5) +
+  facet_grid(~woa, labeller = (woa=custom_labeller)) +
+  scale_fill_brewer(palette = "Set1") +
+  scale_color_brewer(palette = "Set1") + 
+  theme_minimal() +
+  labs(
+    title = "feed use from two weeks per animal",
+    y = "feed use per animal [g]",
+    fill = "treatment",
+    color = "treatment"
+  ) +
   theme(plot.title = element_text(hjust = 0.5),axis.title.x = element_blank())
+
 
 
 ## model assumptions ####
@@ -1165,17 +1163,17 @@ anova (model_Futter, type= 'marginal')
 #für jeden Haupteffekt und jede Interaktion (je einmal weglassen): (habe ich noch nicht gemacht: xxx jeweils durch die weggelassene Variable ersetzen)
 modell.XXX.lmer <- lmer (feed ~ treat + # einmal weglassen: Haupteffekt VarA1
                            
-                           woa + # einmal weglassen: Haupteffekt VarB1
+                           woa_s + # einmal weglassen: Haupteffekt VarB1
                            
-                           I(woa^2) + # einmal weglassen: Haupteffekt VarC1
+                           I(woa_s^2) + # einmal weglassen: Haupteffekt VarC1
                            
-                           treat:woa + # einmal weglassen: 1. Zweifachinteraktion
+                           treat:woa_s + # einmal weglassen: 1. Zweifachinteraktion
                            
-                           treat:I(woa^2) + # einmal weglassen: 2. Zweifachinteraktion
+                           treat:I(woa_s^2) + # einmal weglassen: 2. Zweifachinteraktion
                            
-                           treat:I(woa^2) + # einmal weglassen: 3. Zweifachinteraktion
+                           treat:I(woa_s^2) + # einmal weglassen: 3. Zweifachinteraktion
                            
-                           treat:woa:I(woa^2) + # einmal weglassen: Dreifachinteraktion
+                           treat:woa_s:I(woa_s^2) + # einmal weglassen: Dreifachinteraktion
                            
                            (1 | pen),
                          
@@ -1191,7 +1189,7 @@ summary (modell.XXX.p)
 library (contrast)
 modell.pred <- contrast (model_Futter, list (treat= levels (feed_tot [, 'treat']),
                                              
-                                             woa= levels (feed_tot [, 'woa'])))
+                                             woa_s= levels (feed_tot [, 'woa_s'])))
 
 modell.pred [['Contrast']]
 modell.pred [['Lower']]
@@ -1203,14 +1201,14 @@ modell.pred [['Upper']]
 library(lme4)
 library(lmerTest)
 #PEn scheint kein relevanter Faktor gewesen zu sein 
-model_Futter <- lmer(feed^2~(treat+woa+I(woa^2))^2 + (1|pen), data =feed_tot) # 3fach Interaktion ()^3 nicht sign. kann ersetzt werden durch ^2 because variance explained by pen = 0 ==> removal of random term:
-model_Futter.1 <- lm(feed~(treat+woa+I(woa^2))^2, data =feed_tot)
+model_Futter <- lmer(feed^2~(treat+woa_s+I(woa_s^2))^2 + (1|pen), data =feed_tot) # 3fach Interaktion ()^3 nicht sign. kann ersetzt werden durch ^2 because variance explained by pen = 0 ==> removal of random term:
+model_Futter.1 <- lm(feed~(treat+woa_s+I(woa_s^2))^2, data =feed_tot)
 anova(model_Futter, model_Futter.1) # yes, we can remove pen: does not explain anything 
 summary(model_Futter)
 summary(model_Futter.1) # in both cases estimates are very similar: e.g. compare intercept estimates...
 plot(feed_tot$pen, feed_tot$feed) # varianz durch pen sehr klein, fast 0
 
-model_Futter <- lm(feed^2~(treat+woa+ I(woa^2))^3 , data =feed_tot)
+model_Futter <- lm(feed^2~(treat+woa_s+ I(woa_s^2))^3 , data =feed_tot)
 
 summary(model_Futter)
 anova(model_Futter)
