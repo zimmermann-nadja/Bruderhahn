@@ -19,6 +19,10 @@ library(pbkrtest)
 
 feed_all <- read_excel("C:/Users/nz24r283/OneDrive/ETH/Masterarbeit_Bruderhahn/Auswertung/Bruderhahn-/Futter_R_2.xlsx")
 feed_all <- read_excel("C:/Users/nadja/OneDrive/ETH/Masterarbeit_Bruderhahn/Auswertung/Bruderhahn-/Futter_R_2.xlsx")
+
+#Normaler Futterverbrauch gemäss Aviforum
+norm <- read_excel("C:/Users/nadja/OneDrive/ETH/Masterarbeit_Bruderhahn/Auswertung/Bruderhahn-/Norm_futter_Gewicht.xlsx")
+norm_feed <- subset(norm,select = c(woa,FV_2_wochen))
 summary(feed_all)
 
 feed_tot <- feed_all[,c(-1)]
@@ -37,47 +41,69 @@ feed_tot$feed <- as.numeric(feed_tot$feed)
 
 
 ### ganzes Pen ####
-custom_labeller <- as_labeller(c(
-  "2" = "1-2 woa",
-  "4" = "3-4 woa",
-  "6" = "5-6 woa",
-  "8" = "7-8 woa",
-  "10" = "9-10 woa",
-  "12" = "11-12 woa"
-))
 
-ggplot(feed_tot, aes(treat,feed)) +
+ggplot(feed_tot, aes(x = factor(woa),feed, fill=treat)) +
   geom_boxplot(aes(color = treat), outlier.shape = 16, outlier.size = 1.5, alpha = 0.5) +
-  facet_grid(~woa, labeller = (woa=custom_labeller)) +
-  scale_fill_brewer(palette = "Set1") +
-  scale_color_brewer(palette = "Set1") + 
+  scale_fill_manual(
+    values = c("#808080", "#5B9BD5", "brown"),
+    labels = c("Male", "Male add. ramp", "Female")) +
+  scale_color_manual(
+    values = c("#808080", "#5B9BD5", "brown"),
+    labels = c("Male", "Male add. ramp", "Female"))+
+  scale_x_discrete(labels = c(
+    "2" = "1-2",
+    "4" = "3-4",
+    "6" = "5-6",
+    "8" = "7-8",
+    "10" = "9-10",
+    "12" = "11-12" ))+
   theme_minimal() +
   labs(
-    title = "feed use per pen (20 animals)",
-    y = "feed use [kg]",
-    fill = "treatment",
-    color = "treatment"
+    title = "Feed use per pen of 20 birds",
+    y = "Feed use [kg]",
+    x = "Week of age",
+    fill = "Experimental groups",
+    color = "Experimental groups"
   ) +
-  theme(plot.title = element_text(hjust = 0.5),axis.title.x = element_blank())
+  theme(
+    plot.title = element_text(hjust = 0.75),
+    axis.title.y = element_text(margin = margin(r = 20)),
+    axis.title.x = element_text(margin = margin(t = 10)))
 
 ### Einzeltier in g ####
 
-ggplot(feed_tot_less_woa, aes(treat,feed_animal)) +
+ggplot(feed_tot, aes(x = factor(woa),feed_animal, fill=treat)) +
   geom_boxplot(aes(color = treat), outlier.shape = 16, outlier.size = 1.5, alpha = 0.5) +
-  facet_grid(~woa, labeller = (woa=custom_labeller)) +
-  scale_fill_brewer(palette = "Set1") +
-  scale_color_brewer(palette = "Set1") + 
+  scale_fill_manual(
+    values = c("#808080", "#5B9BD5", "brown"),
+    labels = c("Male", "Male add. ramp", "Female")) +
+  scale_color_manual(
+    values = c("#808080", "#5B9BD5", "brown"),
+    labels = c("Male", "Male add. ramp", "Female"))+
+  scale_x_discrete(labels = c(
+    "2" = "1-2",
+    "4" = "3-4",
+    "6" = "5-6",
+    "8" = "7-8",
+    "10" = "9-10",
+    "12" = "11-12" ))+
   theme_minimal() +
   labs(
-    title = "feed use from two weeks per animal",
-    y = "feed use per animal [g]",
-    fill = "treatment",
-    color = "treatment"
+    title = "Feed use per bird",
+    y = "Feed use [g]",
+    x = "Week of age",
+    fill = "Experimental groups",
+    color = "Experimental groups"
   ) +
-  theme(plot.title = element_text(hjust = 0.5),axis.title.x = element_blank())
+  theme(
+    plot.title = element_text(hjust = 0.75),
+    axis.title.y = element_text(margin = margin(r = 20)),
+    axis.title.x = element_text(margin = margin(t = 10)))
 
 # nur woa 1-5 statistik ausrechnen, bei Plot die hinderen drei woa grau hinterlegen, wenn i.o. auch letzter Zeitpunkt nehmen
 # Plot Linie mit Normalverbrauch für Hennen einfügen -> Durchschnitt und range, falls vorhanden
+
+
 
 ## Statistik ####
 
@@ -100,6 +126,7 @@ qqnorm (unlist (ranef (model_Futter, level= 1))) # für jeden geschachtelten zuf
 scatter.smooth (fitted (model_Futter), resid (model_Futter))
 boxplot (split (resid (model_Futter), feed_tot [, 'pen'])) # für jede erklärende Variable
 
+### model ####
 summary(model_Futter)
 
 #Random effects:
@@ -169,7 +196,7 @@ anova(model_Futter)
 
 model_parameters(model_Futter)
 
-### post hoc contrasts
+### post hoc contrasts ####
 emmeans::emmip(model_Futter,  ~ treat | woa)
 emm_interaction <- emmeans(model_Futter, ~ treat * woa, type="response") #This calculates the estimated marginal means for treat at different values of woa (by default, at the mean of woa).
 # Let's define a few values of 'woa' (mean, 25th percentile, 75th percentile)
@@ -190,7 +217,7 @@ contrast(emm_interaction, method = "pairwise") #adjust = "tukey")
 confint(model_Futter, method="boot",nsim=1000,boot.type="perc")
 
 
-# modell schätzungen
+### modell schätzungen ####
 
 #ACHTUNG hier zuerst lmerTest deinstallieren (oder einfach R neustarten, contrast funktioniert nicht mit lmerTest)
 library (contrast)
@@ -203,52 +230,59 @@ modell.pred [['Lower']]
 modell.pred [['Upper']]
 
 
-#Health ####-------------------------------------------------------------------------------------------------------------------------------------
-##Gewicht #### 
-###Visualisiserung ####
-library(readxl)
-library(ggplot2)
-library(tidyr)
+
+#Gewicht ####------------------------------------------------------------------------------------------------------------------------------------ 
+##Visualisiserung ####
 #wenn ein Faktor quadratisch verwendet wird, dann numerisch weil ein Faktro nicht quadratisch gerechnet werden kann 
+
 #weight <- read_excel("C:/Users/nz24r283/OneDrive/ETH/Masterarbeit_Bruderhahn/Auswertung/Bruderhahn-/Gewicht_R.xlsx")
 weight_all <- read_excel("C:/Users/nadja/OneDrive/ETH/Masterarbeit_Bruderhahn/Auswertung/Bruderhahn-/Gewicht_R.xlsx")
 str(weight_all)
 hist(weight_all$weight)
 weight.df <- weight_all[,c(-1)]
-names(weight)
-table(weight)
 
-str(weight)
-summary(weight)
-View(weight)
-str(weight)
-weight$woa <- as.factor(weight$woa) 
-weight$pen <- as.factor(weight$pen)
-weight$treat <- as.factor(weight$treat)
-weight$weight <- as.numeric(weight$weight)
+str(weight.df)
+summary(weight.df)
+weight.df$woa <- factor(weight.df$woa, ordered = TRUE) 
+weight.df$pen <- as.factor(weight.df$pen)
+weight.df$treat <- as.factor(weight.df$treat)
+weight.df$weight <- as.numeric(weight.df$weight)
+str(weight.df)
 
-ggplot(weight_all, aes(treat,weight,)) +
+
+ggplot(weight_all, aes(x = factor(woa), y = weight, fill = treat)) +
   geom_boxplot(aes(color = treat), outlier.shape = 16, outlier.size = 1.5, alpha = 0.5) +
-  facet_grid(~woa) +
-  scale_fill_brewer(palette = "Set1") +
-  scale_color_brewer(palette = "Set1") + 
+  scale_fill_manual(
+    values = c("#808080", "#5B9BD5", "brown"),
+    labels = c("Male", "Male add. ramp", "Female")  
+  ) +
+  scale_color_manual(
+    values = c("#808080", "#5B9BD5", "brown"),
+    labels = c("Male", "Male add. ramp", "Female")
+  ) +
   theme_minimal() +
   labs(
-    title = "weight of birds",
-    y = "weight [g]",
-    fill = "treatment",
-    color = "treatment"
+    title = "Weight of birds",
+    x = "Week of age",
+    y = "Weight [g]",
+    fill = "experimental groups",
+    color = "experimental groups"
   ) +
-  theme(plot.title = element_text(hjust = 0.5),axis.title.x = element_blank())
+  theme(
+    plot.title = element_text(hjust = 0.75),
+    axis.title.y = element_text(margin = margin(r = 20)),
+    axis.title.x = element_text(margin = margin(t = 10)))
 
+
+##Statistik ####
 #Log genommen, damit Model assumptions besser werden
 model_weight <- lmer(log(weight)~(treat+as.factor(woa))^2 + (1|pen), data =weight.df) 
 anova(model_weight)
 
 #Global average effekt: Wie viel erklärt mein volles Modell zu keinem Modell
-model_Futter0 <- lmer(feed~ 1+ (1|pen), data =feed_tot_less_woa) # Intercept only model, nur random effekt wird betrachtet
-summary(model_Futter0) #Pen ist 0 -> erklärt das Modell nicht
-modell.null.p <- PBmodcomp (model_Futter, model_Futter0) 
+model_weight0 <- lmer(weight~ 1+ (1|pen), data =weight.df) # Intercept only model, nur random effekt wird betrachtet
+summary(model_weight0) #Pen ist 0 -> erklärt das Modell nicht
+modell.null.p <- PBmodcomp (model_weight, model_weight0) 
 summary (modell.null.p) #unser Modell ist signifikant unterschieden zu einem leren Modell -> Ist gut, unser Model erklärt
 
 ### model assumptions ####
@@ -259,6 +293,7 @@ qqnorm (unlist (ranef (model_weight, level= 1))) # für jeden geschachtelten zuf
 scatter.smooth (fitted (model_weight), resid (model_weight))
 boxplot (split (resid (model_weight), feed_tot [, 'pen'])) # für jede erklärende Variable
 
+### model ####
 summary(model_weight)
 
 
@@ -267,7 +302,7 @@ summary(model_weight)
 #pen      (Intercept) 0.000029 0.005385
 #Residual             0.005902 0.076825-> Pen erklärt 0.5 % der Varianz, deshalb brauchen wir den random term nicht? 
 # -> funktioniert ohne Pen nicht, weil error no random effects terms specified in formula
-#Futter hatte einen Pen-Effekt aber GEwicht nicht: Gewisse Pens haben mehr Futter rausgescharrt / verschwendet als andere
+#Futter hatte einen Pen-Effekt aber Gewicht nicht: Erklärung: gewisse Pens haben mehr Futter rausgescharrt / verschwendet als andere
 
 plot(weight.df$pen, weight.df$weight) # varianz durch pen sehr klein, fast 0
 
@@ -295,12 +330,91 @@ modell.weight.tw.p <- PBmodcomp (model_weight, modell.weight.tw.lmer)
 summary (modell.tw.p)
 #LRT      55.687  2.000        8.085e-13 *** #-> dasselbe wie anova, für den Bericht relevant
 #PBtest   55.687                0.000999 *** #-> zeigt noch die Robustheit an 
-anova(modell.tw.lmer, model_weight)
+anova(modell.weight.tw.lmer, model_weight) #signifikant Unterschienden -> Interaktion darf nicht wegelassen werden
 
-# Kann es nicht rechnen, wahrscheinlich wegen log -> werde heute Abend noch probieren
-
+### post hoc contrasts ####
 #bei emmeans type response einfügen, damit ich keine Log skala habe
 
-##Kamm ####
+emmeans::emmip(model_weight,  ~ treat | woa)
+emm_interaction.weight <- emmeans(model_weight, ~ treat * woa, type="response") #This calculates the estimated marginal means for treat at different values of woa (by default, at the mean of woa).
+# mean, 25th percentile, 75th percentile)
+woa_values.weight <- quantile(weight.df$woa, probs = c(0,0.5, 1), typ =1) #Wirklich so?
 
-##Körperbreite ####
+# Obtain estimated marginal means for 'treat' at those specific values of 'woa'
+emm_interaction_custom.weight <- emmeans(model_weight, ~ treat | woa, at = list(woa = woa_values.weight))
+# Perform pairwise comparisons between levels of 'treat' at those values of 'woa'
+interaction_comparisons_custom.weight <- pairs(emm_interaction_custom.weight)
+print(interaction_comparisons_custom.weight)
+
+# View the results of mean and CI per factor
+summary(emm_interaction.weight)
+# Obtain estimated marginal means for 'treat' at those specific values of 'woa'
+contrast(emm_interaction.weight, method = "pairwise") #adjust = "tukey")
+
+# confidenzintervall (alles mit null ist nicht signifikant)
+confint(model_weight, method="boot",nsim=1000,boot.type="perc")
+
+
+
+#Kamm ####----------------------------------------------------------------------------------------------------------------------------------------
+
+Gesundheitsdaten <- read_excel("C:/Users/nadja/OneDrive/ETH/Masterarbeit_Bruderhahn/Auswertung/Bruderhahn-/Gesundheitsdaten_R.xlsx")
+Kamm <- Gesundheitsdaten[, c(2,4, 6, 10)]
+str(Kamm)
+Kamm$treat <- as.factor(Kamm$treat)
+Kamm$pen <- as.factor(Kamm$pen)
+
+
+### Visualisierung ####
+
+ggplot(Kamm, aes(treat,comb,fill =treat)) +
+  geom_boxplot(aes(color = treat), outlier.shape = 16, outlier.size = 1.5, alpha = 0.5) +
+  scale_fill_manual(values = c("#808080", "#5B9BD5", "brown"))+
+  scale_color_manual(values = c("#808080", "#5B9BD5", "brown")) + 
+  scale_y_continuous(breaks = seq(0, max(Kamm$comb, na.rm = TRUE), by = 1)) +  # Y-Achse ganzzahlig
+  scale_x_discrete(labels = c("M" = "Male", "M+" = "Male add. ramp", "W" = "Female")) + 
+  theme_minimal() +
+  labs(
+    title = "comb and thorat of birds",
+    y = "comb injuries",
+    x = NULL
+  ) +
+  theme(
+  plot.title = element_text(hjust = 0.5),
+  axis.title.y = element_text(margin = margin(r = 20)),
+  axis.title.x = element_text(margin = margin(t = 10)),
+  legend.position = "none", 
+  panel.grid.minor.y = element_blank())
+
+###Statistik ####
+
+#Kann log auf Grund der vielen Null-Werten nicht verwenden
+model_kamm <- lmer(comb ~ treat+ (1|pen), data =Kamm) 
+anova(model_kamm)
+
+#Global average effekt: Wie viel erklärt mein volles Modell zu keinem Modell
+model_kamm0 <- lmer(comb~ 1+ (1|pen), data =Kamm) # Intercept only model, nur random effekt wird betrachtet
+summary(model_kamm0) 
+modell.null.p <- PBmodcomp (model_kamm, model_kamm0) 
+summary (modell.null.p) #unser Modell ist signifikant unterschieden zu einem leren Modell -> Ist gut, unser Model erklärt
+
+#### model assumptions ####
+par (mfrow= c (3, 3)) # alle Teilabbildungen gemeinsam anschauen
+qqnorm (resid (model_kamm))
+qqline(resid(model_kamm))
+qqnorm (unlist (ranef (model_kamm, level= 1))) # für jeden geschachtelten zufäll. Effekt
+scatter.smooth (fitted (model_kamm), resid (model_kamm))
+boxplot (split (resid (model_kamm), feed_tot [, 'pen'])) # für jede erklärende Variable
+
+#### model ####
+summary(model_kamm)
+
+#Random effects:
+#Groups   Name        Variance  Std.Dev.
+#pen      (Intercept) 0.098     0.3131
+#Residual             3.622     1.9032 -> Pen erklärt 2.7 % der Varianz, wir lassen es trotdem drin als random term (ab rund 5%)
+
+plot(Kamm$pen, Kamm$comb) # varianz durch pen sehr klein
+
+
+
