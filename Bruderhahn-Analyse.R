@@ -175,6 +175,22 @@ ggplot(Distribution %>% filter((timepoint %in% c("13"))), aes(timepoint,`perches
   
   theme(plot.title = element_text(hjust = 0.5))
 
+#Anzahl Tiere auf den oberen beiden Sitzstangen pro woa 
+#### 26.01.2025 NEW EINSCHUB ####
+#Anzahl Tiere auf den oberen beiden Sitzstangen pro woa 
+Distribution$perches34 <- Distribution$topP+Distribution$midP
+str(Distribution)
+less_woa_1$perches34 <- less_woa_1$topP+less_woa_1$midP
+ggplot(less_woa_1, aes(x = woa, y = perches34, colour =treat, group = treat)) + stat_summary(fun = sum, geom = "line")+facet_grid(~timepoint_cat)
+
+ggplot(less_woa_1, aes(x = woa, y = (perches34/20),color=treat, group=treat)) +
+  geom_smooth(stat = 'summary', fun.y = mean, se =TRUE, method="lm") +
+  stat_summary(fun.y = mean, geom="line")+
+  stat_summary(fun.y = mean, geom="point")+
+  facet_grid(~timepoint_cat)
+
+#### 26.01.2025 ENDE EINSCHUB ####
+
 #### NEW YG EINSCHUB ####
 library(boot)
 extract.ci <- function(x) {
@@ -398,6 +414,164 @@ check_overdispersion(Model_perch34)
 
 ### both perches ####
 #### logistic regression with ceiling effect both perches ####
+#### 27.1.2025 EINSCHUB ####
+# best fitting approach:
+# perch use yes/no (incl timepoint_cat dusk versus dawn)
+# perch use odds ratio versus no perch use (no timepoint_cat)
+
+#### logistic regression with ceiling effect both perches ####
+library(lme4)
+str(less_woa)
+less_woa$woa_s <- scale(less_woa$woa)
+less_woa$timepoint <- droplevels(less_woa$timepoint)
+less_woa_sub <- less_woa %>%
+  mutate(
+    timepoint_cat = case_when(
+      timepoint %in% c("1") ~ "dawn",           # forgot whether dusk or dawn ;-)
+      timepoint %in% c("3", "4","5","7","8","9","10") ~ "light", # time of day between dusk and dawn
+      timepoint %in% c("13") ~ "dusk", 
+      TRUE ~ "Other"                                   # Keep other values as 'Other'
+    )
+  )
+less_woa_sub$woa
+# with timepoint dusk/dawn
+Model_perch34 <- glmer(cbind((topP+midP), (20-(topP+midP))) ~ treat + woa + I(woa^2)+ timepoint_cat+
+                         treat:woa +
+                         treat:I(woa^2) +
+                         treat:timepoint_cat +
+                         (1|pen), family=binomial, data=less_woa_sub)
+
+summary(Model_perch34)
+library(car)
+vif(Model_perch34)
+testDispersion(Model_perch34)
+simulationOutput <- simulateResiduals(fittedModel = Model_perch34, plot = F)
+residuals(simulationOutput)
+residuals(simulationOutput, quantileFunction = qnorm, outlierValues = c(-7,7))
+plot(simulationOutput)
+# slightly overdispersed, does it matter?, test with binary outcome:
+less_woa_sub$perches34>0 <- less_woa_sub$topP+less_woa_sub$midP
+Model_perch34 <- glmer(perches34>0 ~ treat + woa +  I(woa^2)+timepoint_cat+
+                         treat:woa +
+                         treat:I(woa^2) +
+                         treat:timepoint_cat +
+                         (1|pen), family=binomial, data=less_woa_sub)
+library(performance)
+check_model(Model_perch34)
+summary(Model_perch34)
+# we have issue with multicollinearity and convergence issues, therefore exclude quadratic term
+
+#wahrscheinlichkeit, dass sie auf SS gehen: oben ja/nein
+Model_perch34 <- glmer(perches34>0 ~ treat + woa +  timepoint_cat+
+                         treat:woa +
+                         treat:timepoint_cat +
+                         (1|pen), family=binomial, data=less_woa_sub)
+
+testDispersion(Model_perch34)
+simulationOutput <- simulateResiduals(fittedModel = Model_perch34, plot = F)
+residuals(simulationOutput)
+residuals(simulationOutput, quantileFunction = qnorm, outlierValues = c(-7,7))
+plot(simulationOutput)
+
+anova(Model_perch34)
+
+Model_perch34.tw <- glmer(perches34>0 ~ treat + woa +  timepoint_cat+
+                            #treat:woa +
+                            treat:timepoint_cat +
+                            (1|pen), family=binomial, data=less_woa_sub)
+
+anova(Model_perch34, Model_perch34.tw)
+
+Model_perch34.main <- glmer(perches34>0 ~ treat + woa +  timepoint_cat+
+                              #treat:woa +
+                              #treat:timepoint_cat +
+                              (1|pen), family=binomial, data=less_woa_sub)
+
+anova(Model_perch34, Model_perch34.main)
+
+Model_perch34.main.t <- glmer(perches34>0 ~ treat + woa +  #timepoint_cat+
+                                #treat:woa +
+                                #treat:timepoint_cat +
+                                (1|pen), family=binomial, data=less_woa_sub)
+
+anova(Model_perch34.main.t, Model_perch34.main)
+
+Model_perch34.main.woa <- glmer(perches34>0 ~ treat + #woa +  
+                                  timepoint_cat+
+                                  #treat:woa +
+                                  #treat:timepoint_cat +
+                                  (1|pen), family=binomial, data=less_woa_sub)
+
+anova(Model_perch34.main.woa, Model_perch34.main)
+
+Model_perch34.main.treat <- glmer(perches34>0 ~ #treat + 
+                                    woa +  
+                                    timepoint_cat+
+                                    #treat:woa +
+                                    #treat:timepoint_cat +
+                                    (1|pen), family=binomial, data=less_woa_sub)
+
+anova(Model_perch34.main.treat, Model_perch34.main)
+
+# second step of zero inflated approach
+less_woa_sub_nonzero <- subset(less_woa_sub, perches34>0)
+Model_perch34 <- glmer(perches34 ~ treat + woa +  timepoint_cat+
+                         treat:woa +
+                         treat:timepoint_cat +
+                         (1|pen), family=poisson, data=less_woa_sub_nonzero)
+
+testDispersion(Model_perch34)
+simulationOutput <- simulateResiduals(fittedModel = Model_perch34, plot = F)
+residuals(simulationOutput)
+residuals(simulationOutput, quantileFunction = qnorm, outlierValues = c(-7,7))
+plot(simulationOutput)
+
+anova(Model_perch34)
+Model_perch34.tt <- glmer(perches34 ~ treat + woa +  timepoint_cat+
+                            treat:woa +
+                            #treat:timepoint_cat +
+                            (1|pen), family=poisson, data=less_woa_sub_nonzero)
+
+anova(Model_perch34.tt,Model_perch34)
+
+Model_perch34.tw <- glmer(perches34 ~ treat + woa +  timepoint_cat+
+                            #treat:woa +
+                            treat:timepoint_cat +
+                            (1|pen), family=poisson, data=less_woa_sub_nonzero)
+anova(Model_perch34.tw,Model_perch34)
+
+Model_perch34.main <- glmer(perches34 ~ treat + woa +  timepoint_cat+
+                              #treat:woa +
+                              #treat:timepoint_cat +
+                              (1|pen), family=poisson, data=less_woa_sub_nonzero)
+anova(Model_perch34.main, Model_perch34)
+
+Model_perch34.tc <- glmer(perches34 ~ treat + woa +  #timepoint_cat+
+                            #treat:woa +
+                            #treat:timepoint_cat +
+                            (1|pen), family=poisson, data=less_woa_sub_nonzero)
+anova(Model_perch34.main, Model_perch34.tc)
+
+Model_perch34.w <- glmer(perches34 ~ treat + #woa +  
+                           timepoint_cat+
+                           #treat:woa +
+                           #treat:timepoint_cat +
+                           (1|pen), family=poisson, data=less_woa_sub_nonzero)
+anova(Model_perch34.main, Model_perch34.w)
+
+Model_perch34.treat <- glmer(perches34 ~ #treat + 
+                               woa +  
+                               timepoint_cat+
+                               #treat:woa +
+                               #treat:timepoint_cat +
+                               (1|pen), family=poisson, data=less_woa_sub_nonzero)
+anova(Model_perch34.main, Model_perch34.treat)
+
+
+# odds ratio von wie viel wahrscheinlicher sind Tiere auf SSt versus wahrscheinlichkeit nicht oben zu sein
+### ENDE EINSCHUB ####
+
+
 library(lme4)
 str(less_woa)
 less_woa$woa_s <- scale(less_woa$woa)
@@ -560,6 +734,68 @@ Model_litter <- glmer(cbind(litter, (20-litter)) ~ treat + woa_s + I(woa_s)^2+
                         (1|pen), family=binomial, data=less_tp_light_only)
 summary(Model_litter)
 
+library(DHARMa)
+testDispersion(Model_litter)
+simulationOutput <- simulateResiduals(fittedModel = Model_litter, plot = F)
+residuals(simulationOutput)
+residuals(simulationOutput, quantileFunction = qnorm, outlierValues = c(-7,7))
+plot(simulationOutput)
+
+#high dispersion values therefore: test the probability of getting litter use:
+str(less_tp_light_only)
+Model_litter <- glmer(litter>0 ~ treat + woa + I(woa)^2+ 
+                        treat:woa +
+                        treat:I(woa^2)+
+                        (1|pen), family=binomial, data=less_tp_light_only)
+summary(Model_litter)
+library(lmerTest)
+anova(Model_litter)
+
+Model_litter.tiw <- glmer(litter>0 ~ treat + woa + I(woa)^2+ 
+                            treat:woa +
+                            #treat:I(woa^2)+
+                            (1|pen), family=binomial, data=less_tp_light_only)
+anova(Model_litter.tiw,Model_litter)
+
+Model_litter.tw <- glmer(litter>0 ~ treat + woa + I(woa)^2+ 
+                           #treat:woa +
+                           treat:I(woa^2)+
+                           (1|pen), family=binomial, data=less_tp_light_only)
+anova(Model_litter.tw,Model_litter)
+
+
+# step 2 of zero-inflated model:
+less_tp_light_only_litter <- subset(less_tp_light_only, litter !=0)
+Model_litter.full_nonzero <-glmer(cbind(litter,(20-litter) ) ~ treat + woa + I(woa)^2+ 
+                                    treat:woa +
+                                    treat:I(woa^2)+
+                                    (1|pen), family=binomial, data=less_tp_light_only_litter)
+library(DHARMa)
+testDispersion(Model_litter.full_nonzero)
+simulationOutput <- simulateResiduals(fittedModel = Model_litter.full_nonzero, plot = F)
+residuals(simulationOutput)
+residuals(simulationOutput, quantileFunction = qnorm, outlierValues = c(-7,7))
+plot(simulationOutput)
+
+# still huge overdispersion: 
+library(glmmTMB)
+negbinom.Model_litter <- glmmTMB(litter ~ treat + woa + I(woa)^2+ 
+                                   treat:woa +
+                                   treat:I(woa^2)+ (1 | pen), family = nbinom2, data = less_tp_light_only_litter)
+
+testDispersion(negbinom.Model_litter)
+simulationOutput <- simulateResiduals(fittedModel = negbinom.Model_litter, plot = F)
+residuals(simulationOutput)
+residuals(simulationOutput, quantileFunction = qnorm, outlierValues = c(-7,7))
+plot(simulationOutput)
+
+# improved a lot
+
+#### END EINSCHUB ####
+
+
+
+
 Model_litter.tiw <- glmer(cbind(litter, (20-litter)) ~ treat + woa_s + I(woa_s)^2+ 
                             treat:woa_s +
                             #treat:I(woa_s^2)+
@@ -698,29 +934,58 @@ ggplot(all_woa_sub , aes(timepoint_cat,secondfloor_use/20,fill=treat)) +
 # to keep everything the same: litter was zero for dusk and dawn therefore both excluded, perches34 it was zero for day: 
 #so keep dusk and dawn and pool it and secondflooruse: all values are available so pool all or combine dusk/dawn in one stats and daytime in one stats
 
+#### 27.01.2025 NEW EINSCHUB ####
 # dusk/dawn pooled
 str(all_woa_sub_dimming$timepoint_cat)
 all_woa_sub_dimming <- subset(all_woa_sub, timepoint_cat !="light")
 str(all_woa_sub_dimming)
 all_woa_sub_dimming$timepoint_cat <- as.factor(all_woa_sub_dimming$timepoint_cat)
-secondfloor.fit <- glmer((cbind(secondfloor_use, 20-secondfloor_use)) ~ treat + woa_s + I(woa_s^2)+
-                           treat:woa_s+
-                           treat:I(woa_s^2)+
-                           (1|pen), family=binomial, data=all_woa_sub_dimming)
+library(lme4)
 
-secondfloor.fit.tiw <- glmer((cbind(secondfloor_use, 20-secondfloor_use)) ~ treat + woa_s + I(woa_s^2)+
-                               treat:woa_s+
-                               #treat:I(woa_s^2)+
-                               (1|pen), family=binomial, data=all_woa_sub_dimming)
+secondfloor.fit <- glmer((cbind(secondfloor_use, 20-secondfloor_use)) ~ treat + woa + I(woa^2)+ timepoint_cat+
+                           treat:timepoint_cat+
+                           treat:woa+
+                           treat:I(woa^2)+
+                           (1|pen), family=binomial, data=all_woa_sub)
 
-anova(secondfloor.fit.tiw,secondfloor.fit)
+summary(secondfloor.fit)
+print(secondfloor.fit, correlation=T)
 
-secondfloor.fit.tw <- glmer((cbind(secondfloor_use, 20-secondfloor_use)) ~ treat + woa_s + I(woa_s^2)+
-                              #treat:woa_s+
-                              treat:I(woa_s^2)+
-                              (1|pen), family=binomial, data=all_woa_sub_dimming)
+library(DHARMa)
+testDispersion(secondfloor.fit)
+simulationOutput <- simulateResiduals(fittedModel = secondfloor.fit, plot = F)
+residuals(simulationOutput)
+residuals(simulationOutput, quantileFunction = qnorm, outlierValues = c(-7,7))
+plot(simulationOutput)
+
+secondfloor.fit <- glmer((cbind(secondfloor_use, 20-secondfloor_use)) ~ treat + woa + I(woa^2)+
+                           treat:woa+
+                           treat:I(woa^2)+
+                           (1|pen)+(1|timepoint_cat), family=binomial, data=all_woa_sub)
+
+summary(secondfloor.fit)
+# random effects variance: 
+# proportion of variance explained by timepoint_cat:
+0.04394 + 0.06768 = 0.11162
+# proportion of variance explained: 0.06768/0.11162 = 0.6063429 ==> 60.63 %!!!
+
+secondfloor.fit.tt <- glmer((cbind(secondfloor_use, 20-secondfloor_use)) ~ treat + woa + I(woa^2)+timepoint_cat+
+                              #treat:timepoint_cat+
+                              treat:woa+
+                              treat:I(woa^2)+
+                              (1|pen), family=binomial, data=all_woa_sub)
+
+anova(secondfloor.fit.tt,secondfloor.fit)
+
+secondfloor.fit.tw <- glmer((cbind(secondfloor_use, 20-secondfloor_use)) ~ treat + woa + I(woa^2)+timepoint_cat+
+                              #treat:woa+
+                              treat:timepoint_cat+
+                              treat:I(woa^2)+
+                              (1|pen), family=binomial, data=all_woa_sub)
 
 anova(secondfloor.fit.tw,secondfloor.fit)
+
+#### END EINSCHUB ####
 
 # NZ: ADD EMMEANS
 
