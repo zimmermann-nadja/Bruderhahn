@@ -13,6 +13,84 @@ library(car)
 library(lmerTest)
 library(DHARMa)#
 library(pbkrtest)
+
+#Ramp use ####-------------------------------------------------------------------------------------------------------------------------------------------------------------------
+#male_move<- read_excel("D:/Projekt_Bruderhaehne/Auswertung/Bruderhahn_Analysis/Moving_R.yg.xlsx")
+male_move<- read_excel("C:/Users/nadja/OneDrive/ETH/Masterarbeit_Bruderhahn/Auswertung/Bruderhahn-/ramp_use_males.nz.xlsx")
+#male_move <- read_excel("C:/Users/nz24r283/OneDrive/ETH/Masterarbeit_Bruderhahn/Auswertung/Bruderhahn-/ramp_use_males.nz.xlsx")
+
+str(male_move)
+male_move$pen <- as.factor(male_move$pen)
+male_move$treat <- as.factor(male_move$treat)
+male_move$time <- as.factor(male_move$time)
+male_move$direction <- as.factor(male_move$direction)
+male_move$ramp_use <- male_move$ramp / male_move$total
+male_move$ramp_use <- as.numeric(male_move$ramp_use)
+male_move$woa <- as.integer(male_move$woa)
+View(male_move)
+maleR <- subset(male_move, treat =="M+") # subset dateset for M+ only
+View(maleR)
+
+
+##Visualisiserung ####
+
+
+maleR_filtered <- maleR %>%
+  #filter(!is.na(direct), !is.na(ramp)) %>% # Entfernt NAs aus direct und rampe
+  mutate(`time` = factor(`time`, levels = c("dawn", "mid", "dusk")))%>%   # Reihenfolge defin
+  pivot_longer(cols = c(direct, ramp), names_to = "group", values_to = "value") # Daten umformen
+
+
+# Plot mit beiden Gruppen (direct und rampe)
+ggplot(maleR_filtered, aes(x = time, y = value, fill = interaction(group, direction))) +
+  geom_boxplot(aes(color = interaction(group, direction)), outlier.shape = 16, outlier.size = 1.5, alpha = 0.5) + 
+  facet_grid(~woa) + 
+  scale_fill_manual(
+    values = c("lightblue", "darkblue"),
+    labels = c("Male", "Male add. ramp", "Female")) +
+  scale_color_manual(
+    values = c("#808080", "#5B9BD5", "brown"),
+    labels = c("Male", "Male add. ramp", "Female"))+
+  scale_x_discrete(labels = c(
+  theme_minimal() +
+  labs(
+    title = "Percentage of males using ramps (direct and rampe)",
+    x = "time",
+    y = "count of movement",
+    fill = "group",
+    color = "group"
+  ) +
+  theme(
+    plot.title = element_text(hjust = 0.5), # Titel zentrieren
+    strip.text = element_text(face = "bold") # Facettenüberschrift hervorheben
+  )
+
+
+
+# ggplot of percentage of birds using or not using ramps by movement direction and woa
+
+library(dplyr)
+
+maleR_filtered <- maleR %>%
+  #filter(!is.na(ramp_use)) %>%
+  mutate(`time` = factor(`time`, levels = c("dawn", "mid", "dusk")))   
+
+ggplot(maleR_filtered, aes(x = time, y = `ramp_use`, fill = direction)) +
+  geom_boxplot(aes(color = direction), outlier.shape = 16, outlier.size = 1.5, alpha = 0.5) + 
+  facet_grid(~woa) + 
+  scale_fill_brewer(palette = "Set1") + 
+  scale_color_brewer(palette = "Set1") + 
+  theme_minimal() +
+  labs(
+    title = "Percentage of males using ramps",
+    x = "time",
+    y = "using of ramp [%]",
+    fill = "direction",
+  ) +
+  theme(plot.title = element_text(hjust = 0.5))
+
+
+
 #Feed ####-----------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
 ##Visualisiserung ####
